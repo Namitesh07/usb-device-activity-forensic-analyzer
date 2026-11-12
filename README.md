@@ -6,76 +6,89 @@
 
 **Turn prepared USB activity records into an investigation starting point.**
 
-`Python` · `Tkinter` · `Pandas` · `Matplotlib` · `Local-first` · `v1.0.0`
+`Browser-local` · `JavaScript` · `No backend` · `Prepared CSV` · `v1.1.0`
 
-[Getting started](#getting-started) · [CSV format](docs/INPUTS.md) · [Upgrade roadmap](docs/ROADMAP.md) · [Changelog](CHANGELOG.md)
+[Get started](#get-started) · [CSV input guide](docs/INPUTS.md) · [Upgrade roadmap](docs/ROADMAP.md) · [Changelog](CHANGELOG.md)
 
 </div>
 
 ---
 
-An offline desktop workspace for students and early-career analysts to explore **prepared USB activity CSVs**. Review the timeline, compare device IDs, and identify repeated connection records worth investigating.
+Explore prepared USB activity records in a **browser-based triage workspace**. Review the timeline, compare device identifiers, and find repeated connection records worth investigating. The app is static and works with GitHub Pages; it has no server-side component, analytics, or account requirement.
 
 | Workspace | What it shows |
 | --- | --- |
-| **Overview** | Record counts, connection records, device IDs, repeated IDs, activity charts. |
-| **Timeline & devices** | Chronological records, searchable views, first/last observed times, connection counts. |
-| **Data quality** | Source SHA-256, skipped rows, missing fields, and timezone assumptions. |
-| **Exports** | Filtered event CSV and a plain-text triage report with source and limitations. |
+| **Overview** | Record counts, connection records, device IDs, repeated IDs, and an activity chart. |
+| **Evidence explorer** | Searchable, filterable timeline and paginated device summaries. |
+| **Data quality** | Source SHA-256, skipped rows, missing identifiers, and timezone assumptions. |
+| **Exports** | Filtered events as spreadsheet-safe CSV and a plain-text triage report. |
 
-The application processes files locally and does not send them to a server. It does not save cases automatically. The source CSV is read without being modified; exported files are saved only when you choose a destination.
+Evidence is processed in the browser tab; files are not uploaded or saved automatically. Source files remain unchanged by the application. Exports are downloaded only when requested. Use a separate destination so browser download settings do not overwrite your original evidence.
 
-## Getting started
+## Get started
 
-**Requirements:** Python 3.10–3.12 with Tkinter, and the packages in `requirements.txt`. On some Linux systems Tkinter is supplied by a separate `python3-tk` package. Installing Python packages requires internet access; the application itself works offline.
+### Open the browser app
 
-Download or clone the repository, open a terminal in its folder, and run:
+After GitHub Pages is enabled for this repository, open the published site link shown in **Settings → Pages**. Select **Try fictional sample**, or choose a prepared CSV and select **Analyze records**. Before analysis, set the fixed UTC offset for timestamps without one; the default is `+00:00`.
+
+To run a local copy, download or clone this repository and open `index.html` in a current browser. If your browser does not permit SHA-256 hashing on local files, serve the folder through localhost instead:
+
+```bash
+python -m http.server 8000
+```
+
+Then open `http://localhost:8000/`. Python is only needed for this optional local server, not for the browser app on GitHub Pages. The browser version needs a secure context (HTTPS, localhost, or a supported local-file context) for its SHA-256 API. Once the page assets are loaded, evidence analysis requires no network access.
+
+### CSV requirements
+
+Use a UTF-8 CSV containing these columns:
+
+```csv
+timestamp,event_type,device_id,computer,username
+2026-01-12T08:12:00Z,connected,USB-DEMO-001,LAB-PC-01,analyst
+```
+
+The first three columns are required; `computer` and `username` are optional. The limit is **one CSV, 20 MiB, and 100,000 data records** per analysis. The built-in sample is fictional and includes one invalid timestamp and one missing ID for data-quality review. See the [input guide](docs/INPUTS.md) for supported timestamp and event formats, examples, and export details.
+
+### Desktop version
+
+The original v1.0 Python/Tkinter desktop app remains in this repository. To run it on Windows, macOS, or Linux, install Python 3.10–3.12 with Tkinter, then:
 
 ```bash
 python -m venv .venv
 ```
 
-Activate the environment:
-
-```powershell
-# Windows PowerShell
-.\.venv\Scripts\Activate.ps1
-```
-
-```bash
-# macOS / Linux
-source .venv/bin/activate
-```
-
-Install the dependencies and start the app:
+Activate the environment using `.\.venv\Scripts\Activate.ps1` in Windows PowerShell or `source .venv/bin/activate` on macOS/Linux, then run:
 
 ```bash
 python -m pip install -r requirements.txt
 python app.py
 ```
 
-1. Select **Load sample** to explore fictional records, or **Import CSV** to open an authorized, prepared CSV.
-2. Before import, enter the fixed UTC offset for timestamps that lack one; the default is `+00:00`. Times with their own offsets are converted using those offsets.
-3. Apply filters, inspect **Data quality**, then export the filtered CSV or report if needed. Exports reflect the **applied** filters.
-
-The sample intentionally contains one invalid timestamp and one missing device ID to demonstrate data-quality handling. See the [input guide](docs/INPUTS.md) before using your own evidence.
-
 ## Evidence and limitations
 
-> **This is a triage aid, not an authorization detector.** A repeated device ID or connection record is a lead for review, not proof of an unauthorized device, physical insertion, file transfer, or compromise.
+> **A triage aid, not an authorization detector.** Repeated device IDs or connection-labelled records are leads for review, not proof of an unauthorized device, physical insertion, file transfer, or compromise.
 
-- v1.0 accepts **prepared UTF-8 CSV** with `timestamp`, `event_type`, and `device_id` columns; it does **not** parse raw `.evtx`, Windows Event Viewer exports, registry hives, or live devices automatically.
-- Records and identifiers can be incomplete, duplicated, spoofed, or incorrectly classified upstream. Empty IDs remain in the timeline but are excluded from device counts. The same ID is grouped case-insensitively across computers.
-- Timestamps without offsets use your chosen **fixed** offset, which does not model daylight-saving changes. Displayed times are UTC; original timestamp text remains in CSV exports.
-- A SHA-256 fingerprint helps compare copies, but it does not establish provenance or a complete chain of custody. Retain the original and validate findings using independent evidence.
+- This version reads **prepared CSV** only. It does **not** directly parse `.evtx`, Windows Event Viewer exports, registry hives, SetupAPI logs, or live devices.
+- Event meanings depend on how the source was prepared. Records can be incomplete, duplicated, spoofed, or incorrectly classified upstream. Duplicates are retained; empty IDs are excluded from device counts; IDs are grouped case-insensitively across hosts.
+- Offset-free timestamps use your selected **fixed** offset. That does not model daylight-saving changes. Displayed times are UTC, and CSV exports retain the original timestamp text.
+- A SHA-256 fingerprint helps compare copies; it does not establish provenance or chain of custody. Preserve originals and validate findings against independent evidence.
 
-## Development
+## Development and tests
+
+The browser app uses plain HTML, CSS, and JavaScript with no build step or runtime dependencies. Run its automated tests with Node.js:
+
+```bash
+node --test tests/browser-analysis.test.cjs
+```
+
+The original desktop tests can be run after installing the Python requirements:
 
 ```bash
 python -m unittest discover -s tests -v
 ```
 
-Read the [CSV input guide](docs/INPUTS.md) for event labels, limits, and exported fields. The [numbered roadmap](docs/ROADMAP.md) orders future upgrades by dependency and importance.
+The [numbered roadmap](docs/ROADMAP.md) lists proposed upgrades in order of importance. None should be assumed to exist until implemented and tested.
 
 ---
 
