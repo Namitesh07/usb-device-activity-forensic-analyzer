@@ -8,7 +8,7 @@
 
 `Browser-local` · `JavaScript` · `No backend` · `Prepared CSV` · `v1.1.0`
 
-[Get started](#get-started) · [CSV input guide](docs/INPUTS.md) · [Upgrade roadmap](docs/ROADMAP.md) · [Changelog](CHANGELOG.md)
+[**Open the live app ↗**](https://namitesh07.github.io/usb-device-activity-forensic-analyzer/) · [Get started](#get-started) · [CSV input guide](docs/INPUTS.md) · [Upgrade roadmap](docs/ROADMAP.md) · [Changelog](CHANGELOG.md)
 
 </div>
 
@@ -29,7 +29,7 @@ Evidence is processed in the browser tab; files are not uploaded or saved automa
 
 ### Open the browser app
 
-After GitHub Pages is enabled for this repository, open the published site link shown in **Settings → Pages**. Select **Try fictional sample**, or choose a prepared CSV and select **Analyze records**. Before analysis, set the fixed UTC offset for timestamps without one; the default is `+00:00`.
+[Open the live analyzer](https://namitesh07.github.io/usb-device-activity-forensic-analyzer/). Select **Try fictional sample**, or choose a prepared CSV and select **Analyze records**. Before analysis, set the fixed UTC offset for timestamps without one; the default is `+00:00`.
 
 To run a local copy, download or clone this repository and open `index.html` in a current browser. If your browser does not permit SHA-256 hashing on local files, serve the folder through localhost instead:
 
