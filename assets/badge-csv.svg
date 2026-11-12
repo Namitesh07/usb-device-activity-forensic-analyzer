@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="169" height="25" role="img" aria-labelledby="title">
+  <title id="title">Input: prepared CSV</title>
+  <rect width="169" height="25" rx="5" fill="#263947"/>
+  <path d="M59 0h105a5 5 0 0 1 5 5v15a5 5 0 0 1-5 5H59z" fill="#365b83"/>
+  <g font-family="Verdana,sans-serif" font-size="9" text-anchor="middle" fill="#f4fbfa"><text x="30" y="16">INPUT</text><text x="114" y="16">PREPARED CSV</text></g>
+</svg>
