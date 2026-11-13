@@ -1,0 +1,2 @@
+/* Fictional two-file example, embedded for offline use. */
+window.USB_PHASE1_SAMPLE_FILES = [{"name": "phase1-source-a.csv (fictional)", "content": "Time,Action,Device ID,Host,Details\n2026-11-01T01:30:00,connected,DEVICE_A,WS01,overlap\n2026-03-08T02:30:00,connected,DEVICE_B,WS01,gap\n2026-01-01T12:00:00,connected,DEVICE_C,WS01,first\n"}, {"name": "phase1-source-b.csv (fictional)", "content": "timestamp,event_type,device_id,computer,Details\n2026-01-01T12:00:00,connected,DEVICE_C,WS01,second\n2026-01-01T13:00:00,unknown,,WS01,missing\nbad,connected,D,WS01,bad\n"}];
