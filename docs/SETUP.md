@@ -2,7 +2,7 @@
 
 ## Browser app
 
-[Open the live analyzer](https://namitesh07.github.io/usb-device-activity-forensic-analyzer/) in a current browser. Select **Try fictional sample**, or choose one prepared CSV and select **Analyze records**. Set the fixed UTC offset for timestamps that do not include one; the default is `+00:00`.
+[Open the live analyzer](https://namitesh07.github.io/usb-device-activity-forensic-analyzer/) in a current browser. Select **Try two-file demo**, **Try fictional sample**, or choose prepared CSV files and select **Preview files**. Review each source's column mapping and fixed offset or IANA time zone, confirm the prepared event meanings, then select **Analyze reviewed sources**. The default fixed offset is `+00:00`.
 
 See the [input and evidence guide](INPUTS.md) for the CSV format, size limits, timezone handling, data quality, and export limitations. Analysis happens in the browser; the app does not upload evidence or save the current case automatically. Save exports separately from the original evidence.
 
@@ -41,7 +41,7 @@ python3 -m venv .venv
 Run the browser analysis tests with Node.js:
 
 ```bash
-node --test tests/browser-analysis.test.cjs
+node --test tests/browser-analysis.test.cjs tests/phase1.test.cjs
 ```
 
 After installing the desktop requirements, run the Python tests:
