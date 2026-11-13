@@ -10,7 +10,9 @@
   <title>USB Device Activity Forensic Analyzer</title>
   <link rel="stylesheet" href="styles.css">
   <script src="analysis.js" defer></script>
+  <script src="phase1.js" defer></script>
   <script src="samples/sample-data.js" defer></script>
+  <script src="samples/phase1-sample-data.js" defer></script>
   <script src="script.js" defer></script>
 </head>
 <body>
@@ -54,34 +56,42 @@
       </section>
 
       <section class="workspace-section" id="workspace" aria-labelledby="workspace-title">
-        <div class="section-heading"><div><p class="eyebrow">01 <span>/</span> START AN INVESTIGATION</p><h2 id="workspace-title">Open your evidence.</h2><p>Begin with one prepared CSV, or use the fictional sample to explore.</p></div><span class="section-pill">PREPARED CSV <span>•</span> 20 MiB MAX</span></div>
+        <div class="section-heading"><div><p class="eyebrow">01 <span>/</span> START AN INVESTIGATION</p><h2 id="workspace-title">Open your evidence.</h2><p>Choose prepared CSV files, or use the fictional sample to explore.</p></div><span class="section-pill">UP TO 20 FILES <span>•</span> 20 MiB TOTAL</span></div>
         <div class="workspace-grid">
           <div class="panel intake-panel">
             <div class="panel-label"><span>INPUT SOURCE</span><span>01</span></div>
             <label class="drop-zone" id="drop-zone" for="file-input">
-              <input id="file-input" type="file" accept=".csv,text/csv" aria-describedby="file-help">
+              <input id="file-input" type="file" multiple accept=".csv,text/csv" aria-describedby="file-help">
               <span class="upload-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 16V4m-4 4 4-4 4 4M4 16v3h16v-3"/></svg></span>
-              <strong>Drop your CSV here</strong><span>or <u>choose a file</u> from your device</span><small id="file-label">No file selected</small>
+              <strong>Drop your CSV files here</strong><span>or <u>choose files</u> from your device</span><small id="file-label">No files selected</small>
             </label>
-            <p class="field-note" id="file-help">One UTF-8 CSV · up to 20 MiB or 100,000 records. Required columns: <code>timestamp</code>, <code>event_type</code>, <code>device_id</code>.</p>
-            <div class="intake-actions"><button class="button primary" id="analyze" type="button" disabled>Analyze records <span aria-hidden="true">→</span></button><button class="button secondary" id="demo" type="button">Try fictional sample</button></div>
-            <p class="status" id="status" role="status" aria-live="polite">Choose a CSV or load the sample to begin.</p>
+            <p class="field-note" id="file-help">Up to 20 UTF-8 CSV files · 20 MiB and 100,000 records combined. Large imports can use substantial browser memory. You will map a timestamp, event label, and device ID for each file.</p>
+            <div class="intake-actions"><button class="button primary" id="prepare" type="button" disabled>Preview files <span aria-hidden="true">→</span></button><button class="button secondary" id="demo" type="button">Try fictional sample</button><button class="button secondary" id="demo-multi" type="button" title="Fictional sources with duplicate candidates and daylight-saving times">Try two-file demo</button></div>
+            <p class="field-note">The two-file demo includes fictional duplicate candidates and daylight-saving time issues.</p>
+            <p class="status" id="status" role="status" aria-live="polite">Choose CSV files or load the sample to begin.</p>
           </div>
           <aside class="panel settings-panel">
             <div class="panel-label"><span>BEFORE YOU BEGIN</span><span>02</span></div>
-            <h3>Set your time context.</h3>
-            <p>Choose the fixed UTC offset for timestamps that don't include one. Timestamps with an offset use their own value.</p>
-            <label for="offset">Assumed fixed UTC offset</label>
-            <input id="offset" type="text" value="+00:00" placeholder="+05:30" spellcheck="false" maxlength="6" aria-describedby="offset-help">
-            <small id="offset-help">Example: +05:30 for India. The default is UTC. Fixed offsets do not adjust for daylight saving time.</small>
+            <h3>Review before analysis.</h3>
+            <p>Preview each source, confirm its column mappings, and set a fixed offset or IANA time zone for timestamps without one.</p>
+            <small>Connection labels must come from your prepared evidence. This tool does not infer a physical insertion from a Windows event ID.</small>
             <div class="privacy-callout"><span aria-hidden="true">✳</span><p><strong>Evidence stays on your device.</strong> Your CSV is processed in this tab and is not uploaded or saved automatically.</p></div>
           </aside>
         </div>
+        <section class="panel preview-panel" id="preview" aria-labelledby="preview-title" hidden>
+          <div class="panel-heading"><div><p class="eyebrow">IMPORT REVIEW</p><h3 id="preview-title" tabindex="-1">Check each source.</h3></div><span class="subtle-chip" id="preview-count"></span></div>
+          <p class="muted">Suggestions are based on column names. Review the mappings and time settings for every file. Source rows and fingerprints are preserved.</p>
+          <div id="preview-sources" class="preview-sources"></div>
+          <label class="confirm-mapping"><input type="checkbox" id="mapping-confirm"> <span>I reviewed the mappings and confirm that event labels have been prepared from the evidence; a connection label is not automatically proof of physical insertion.</span></label>
+          <button class="button primary" id="analyze" type="button" disabled>Analyze reviewed sources <span aria-hidden="true">→</span></button>
+          <p class="status" id="preview-status" role="status"></p>
+        </section>
       </section>
 
       <section class="results-section" id="results" aria-labelledby="results-title" hidden>
         <div class="section-heading results-heading"><div><p class="eyebrow">02 <span>/</span> INVESTIGATION VIEW</p><h2 id="results-title" tabindex="-1">The activity, in context.</h2><p>Counts describe the current filtered view.</p></div><button class="button quiet" id="clear-case" type="button">Clear case <span aria-hidden="true">×</span></button></div>
-        <div class="source-panel"><div><span class="source-indicator"></span><span><small>LOADED SOURCE</small><strong id="source-name"></strong></span></div><div class="source-hash"><small>SHA-256 FINGERPRINT</small><code id="source-hash"></code></div><span class="source-tag" id="source-count"></span></div>
+        <div class="source-panel"><div><span class="source-indicator"></span><span><small>LOADED SOURCES</small><strong id="source-name"></strong></span></div><div class="source-hash"><small>SOURCE FINGERPRINTS</small><span id="source-hash">Open source details below</span></div><span class="source-tag" id="source-count"></span></div>
+        <details class="panel source-details"><summary>Source files, fingerprints, and mappings</summary><div id="source-list" class="source-list"></div><p class="muted small">SHA-256 compares file bytes; it does not establish collection history or authenticity.</p></details>
         <div class="metric-grid" id="metrics">
           <article class="metric"><div><span>EVENT RECORDS</span><span class="metric-icon">▥</span></div><strong id="metric-records">0</strong><small>in current view</small></article>
           <article class="metric"><div><span>CONNECTION RECORDS</span><span class="metric-icon">↗</span></div><strong id="metric-connections">0</strong><small>labelled as connected</small></article>
@@ -95,17 +105,17 @@
 
         <section class="panel evidence-panel" aria-labelledby="evidence-title"><div class="panel-heading"><div><p class="eyebrow">EVIDENCE EXPLORER</p><h3 id="evidence-title">Follow the timeline.</h3></div><span class="subtle-chip" id="visible-count" role="status"></span></div>
           <div class="filter-grid" role="search" aria-label="Filter event records"><label>Search records<input type="search" id="search" placeholder="Device ID, computer, user…"></label><label>Event type<select id="event-type"><option value="all">All event types</option><option value="connected">Connected</option><option value="disconnected">Disconnected</option><option value="other">Other</option></select></label><button class="button quiet" type="button" id="clear-filters">Clear filters</button></div>
-          <div class="table-wrap" role="region" aria-labelledby="evidence-title" tabindex="0"><table><caption class="sr-only">USB activity records, ordered by time</caption><thead><tr><th scope="col">TIME (UTC)</th><th scope="col">EVENT</th><th scope="col">DEVICE ID</th><th scope="col">COMPUTER</th><th scope="col">USER</th><th scope="col">RECORD</th></tr></thead><tbody id="event-rows"></tbody></table></div>
+          <div class="table-wrap" role="region" aria-labelledby="evidence-title" tabindex="0"><table><caption class="sr-only">USB activity records, ordered by time</caption><thead><tr><th scope="col">TIME (UTC)</th><th scope="col">EVENT</th><th scope="col">DEVICE ID</th><th scope="col">COMPUTER</th><th scope="col">USER</th><th scope="col">SOURCE</th><th scope="col">RECORD</th></tr></thead><tbody id="event-rows"></tbody></table></div>
           <div class="pager"><button class="button page-button" id="events-prev" type="button">← Previous</button><span id="events-page" role="status"></span><button class="button page-button" id="events-next" type="button">Next →</button></div>
         </section>
 
         <section class="panel devices-panel" aria-labelledby="devices-title"><div class="panel-heading"><div><p class="eyebrow">DEVICE SUMMARY</p><h3 id="devices-title">IDs worth a closer look.</h3></div><span class="subtle-chip">GROUPED BY ID</span></div><p class="muted small">IDs are grouped case-insensitively across hosts. The same identifier does not guarantee the same physical device.</p><div class="table-wrap" role="region" aria-labelledby="devices-title" tabindex="0"><table><caption class="sr-only">Device IDs in the filtered view</caption><thead><tr><th scope="col">DEVICE ID</th><th scope="col">CONNECTIONS</th><th scope="col">RECORDS</th><th scope="col">FIRST SEEN (UTC)</th><th scope="col">LAST SEEN (UTC)</th><th scope="col">COMPUTERS</th></tr></thead><tbody id="device-rows"></tbody></table></div><div class="pager"><button class="button page-button" id="devices-prev" type="button">← Previous</button><span id="devices-page" role="status"></span><button class="button page-button" id="devices-next" type="button">Next →</button></div></section>
 
-        <div class="results-bottom"><details class="panel quality-panel"><summary><span><span class="eyebrow">DATA QUALITY</span><strong>Review import details</strong></span><span class="quality-count" id="quality-count"></span></summary><div class="details-content"><p id="quality-summary"></p><ul id="issues-list"></ul><p class="muted small">A SHA-256 fingerprint supports file comparison; it does not establish provenance or chain of custody.</p></div></details>
-          <section class="panel export-panel"><p class="eyebrow">TAKE THE NEXT STEP</p><h3>Keep a copy.</h3><p class="muted small">Both exports reflect the current filters and include the source fingerprint. CSV fields are protected for spreadsheet use.</p><div class="export-actions"><button class="button secondary" id="export-csv" type="button">↓ Export events CSV</button><button class="button secondary" id="export-report" type="button">↓ Export text report</button></div><p class="status" id="export-status" role="status"></p></section></div>
+        <div class="results-bottom"><details class="panel quality-panel" id="quality-panel"><summary><span><span class="eyebrow">DATA QUALITY</span><strong>Review every issue</strong></span><span class="quality-count" id="quality-count"></span></summary><div class="details-content"><p id="quality-summary"></p><label class="quality-filter">Show quality entries<select id="quality-filter"><option value="all">All entries</option><option value="unresolved">Unresolved local times</option><option value="invalid_timestamp">Invalid timestamps</option><option value="duplicate_candidate">Duplicate candidates</option><option value="unknown_event_type">Unknown event labels</option><option value="missing_device_id">Missing device IDs</option><option value="extra_values">Extra values</option><option value="ambiguous_time">Ambiguous local times</option><option value="nonexistent_time">Nonexistent local times</option></select></label><div id="issues-list" class="issues-list"></div><div class="pager"><button class="button page-button" id="issues-prev" type="button">← Previous</button><span id="issues-page" role="status"></span><button class="button page-button" id="issues-next" type="button">Next →</button></div><p id="resolution-status" class="status" role="status"></p><p class="muted small">Duplicate candidates match mapped fields and may be separate events. All source records remain unchanged.</p></div></details>
+          <section class="panel export-panel"><p class="eyebrow">TAKE THE NEXT STEP</p><h3>Keep a copy.</h3><p class="muted small">Event exports reflect the current filters. The quality CSV covers all sources and entries. Exports contain source hashes, mappings, and original values.</p><div class="export-actions"><button class="button secondary" id="export-csv" type="button">↓ Export events CSV</button><button class="button secondary" id="export-issues" type="button">↓ Export quality CSV</button><button class="button secondary" id="export-report" type="button">↓ Export text report</button></div><p class="status" id="export-status" role="status"></p></section></div>
       </section>
 
-      <section class="guide" id="guide" aria-labelledby="guide-title"><div><p class="eyebrow">03 <span>/</span> FIELD NOTES</p><h2 id="guide-title">Good evidence needs<br><em>good context.</em></h2><p>Use this tool as a starting point. Keep the original evidence and verify conclusions independently.</p></div><div class="guide-cards"><article><span>01</span><h3>Prepare the source</h3><p>Use a UTF-8 CSV with <code>timestamp</code>, <code>event_type</code>, and <code>device_id</code>. Optional columns: <code>computer</code> and <code>username</code>.</p></article><article><span>02</span><h3>Know the limits</h3><p>This version does not read raw .evtx files, Windows Event Viewer exports, registry hives, or live USB devices directly.</p></article><article><span>03</span><h3>Investigate responsibly</h3><p>Event labels depend on preparation. A record or repeated ID cannot by itself prove physical insertion, file transfer, or compromise.</p></article><a href="https://github.com/Namitesh07/usb-device-activity-forensic-analyzer/blob/main/docs/INPUTS.md">Read the full input guide <span>↗</span></a></div></section>
+      <section class="guide" id="guide" aria-labelledby="guide-title"><div><p class="eyebrow">03 <span>/</span> FIELD NOTES</p><h2 id="guide-title">Good evidence needs<br><em>good context.</em></h2><p>Use this tool as a starting point. Keep the original evidence and verify conclusions independently.</p></div><div class="guide-cards"><article><span>01</span><h3>Prepare the source</h3><p>Map columns containing a timestamp, prepared event label, and device ID. Computer and user columns are optional.</p></article><article><span>02</span><h3>Know the limits</h3><p>This version does not read raw .evtx files, Windows Event Viewer exports, registry hives, or live USB devices directly.</p></article><article><span>03</span><h3>Investigate responsibly</h3><p>Event labels depend on preparation. A record or repeated ID cannot by itself prove physical insertion, file transfer, or compromise.</p></article><a href="https://github.com/Namitesh07/usb-device-activity-forensic-analyzer/blob/main/docs/INPUTS.md">Read the full input guide <span>↗</span></a></div></section>
     </main>
     <footer class="footer"><div><strong>USB FORENSIC ANALYZER</strong><small>LOCAL EVIDENCE. BETTER QUESTIONS.</small></div><p>Educational triage · Analyze only evidence you are authorized to review.</p><div class="credit"><small>CREATED BY</small><strong>NAMITESH PANDEY</strong></div></footer>
   </div>
