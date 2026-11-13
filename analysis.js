@@ -48,10 +48,13 @@
 
   // Strict, RFC-style parsing preserves quoted commas, quotes, and newlines.
   // Record numbers are logical CSV records, not physical line numbers.
-  function parseCSV(text) {
+  function parseCSV(text, options) {
     const rows = [];
     let row = [], field = '', quoted = false, closed = false, started = false;
-    function finishField() { row.push(field); field = ''; closed = false; started = false; }
+    function finishField() {
+      if (options && options.maxFields && row.length >= options.maxFields) throw new Error('A CSV record exceeds the 512-value safety limit.');
+      row.push(field); field = ''; closed = false; started = false;
+    }
     function finishRow() {
       if (row.length || field !== '' || started || closed) {
         finishField(); rows.push(row);
@@ -192,6 +195,6 @@
       'Fixed offsets do not model daylight-saving changes. Preserve original evidence.');
     return lines.join('\n') + '\n';
   }
-  return { MAX_BYTES, MAX_RECORDS, parseOffset, parseTimestamp, parseCSV, parsePreparedCSV, loadBytes,
+  return { MAX_BYTES, MAX_RECORDS, parseOffset, parseTimestamp, parseCSV, normalizeType, parsePreparedCSV, loadBytes,
     filterEvents, summarize, spreadsheetSafe, exportCSV, reportText };
 });
