@@ -8,9 +8,9 @@
 
 [![Browser-local analysis](assets/badge-local.svg)](docs/INPUTS.md#outputs-and-preservation)
 [![Prepared CSV input](assets/badge-csv.svg)](docs/INPUTS.md#prepared-csv-contract)
-[![Version 1.2.0](assets/badge-version.svg)](CHANGELOG.md)
+[![Version 1.2.0](assets/badge-version.svg)](https://github.com/Namitesh07/usb-device-activity-forensic-analyzer/releases)
 
-[**Open the live app ↗**](https://namitesh07.github.io/usb-device-activity-forensic-analyzer/) · [Input guide](docs/INPUTS.md) · [Setup & tests](docs/SETUP.md) · [Roadmap](docs/ROADMAP.md) · [Changelog](CHANGELOG.md)
+[**Open the live app ↗**](https://namitesh07.github.io/usb-device-activity-forensic-analyzer/) · [Input guide](docs/INPUTS.md) · [Setup & tests](docs/SETUP.md) · [Roadmap](docs/ROADMAP.md) · [Releases](https://github.com/Namitesh07/usb-device-activity-forensic-analyzer/releases)
 
 </div>
 
