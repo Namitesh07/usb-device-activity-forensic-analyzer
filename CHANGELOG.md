@@ -1,5 +1,14 @@
 # Changelog
 
+## v1.2.0 — Phase 1: more dependable input
+
+- Preview up to 20 prepared CSV files and review per-source column mappings, event meanings, time settings, and SHA-256 fingerprints before analysis.
+- Review all data-quality entries, including skipped records, unknown labels, missing IDs, and duplicate candidates; export the full quality list separately.
+- Interpret offset-free timestamps using a fixed offset or IANA time zone. Ambiguous and nonexistent local times remain skipped until an analyst resolves them.
+- Retain original field values, mappings, source references, and analyst timestamp decisions in the in-memory case and relevant CSV exports.
+- Added a fictional two-file demo and regression tests for mapping, timezones, data quality, provenance, limits, and spreadsheet-safe exports.
+- IANA interpretation of offset-free times is limited to years 1970–2100 and uses the browser's time-zone database. Direct Windows artifact parsing remains future work.
+
 ## v1.1.0 — Browser-based workspace
 
 - Added a static, browser-local application suitable for GitHub Pages, with no backend, sign-in, or runtime dependencies.

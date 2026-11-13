@@ -2,14 +2,14 @@
 
 This is a proposed, dependency-ordered backlog, not a claim that the listed features already exist. Validate each release with representative fixtures and document its limits. Versions and scope can change as the project develops.
 
-The v1.1.0 browser release keeps the initial prepared-CSV workflow local to the user's device. The following items remain future work.
+The v1.2.0 browser release completes the Phase 1 prepared-CSV improvements locally on the user's device. Later phases remain future work.
 
-## Phase 1 — More dependable input
+## Phase 1 — More dependable input (completed in v1.2.0)
 
-1. **Import preview and column mapping:** map common prepared CSV headers, preview sample rows, and require confirmation of event meanings. Keep the original values and mapping with the case.
-2. **Richer data-quality review:** inspect every rejected row, unknown event label, missing identifier, and duplicated record; offer a separate error export without altering evidence.
-3. **Timezone handling:** accept IANA time zones, surface ambiguous/nonexistent daylight-saving times for analyst resolution, and preserve timestamp precision and original offsets.
-4. **Multiple input files:** combine authorized CSVs with per-file fingerprints, separate provenance, size limits, and visible duplicate candidates; retain originals.
+1. **Import preview and column mapping:** review suggested or manual mappings and sample rows for each source, then confirm prepared event meanings. Original fields and mappings remain with the in-memory case and exports.
+2. **Richer data-quality review:** page through every quality entry, including skipped rows, unknown labels, missing identifiers, and duplicate candidates; export the complete quality list.
+3. **Timezone handling:** use fixed offsets or IANA zones and review ambiguous or nonexistent local times. Original values, supported precision, and analyst decisions are retained. IANA interpretation of offset-free times covers 1970–2100.
+4. **Multiple input files:** combine up to 20 prepared CSVs with separate fingerprints and provenance; duplicate candidates are visible and all records are retained.
 
 ## Phase 2 — Evidence adapters
 
@@ -48,4 +48,4 @@ The v1.1.0 browser release keeps the initial prepared-CSV workflow local to the 
 25. **Removable-media enrichment:** optional offline vendor/product lookup and device metadata, with versioned reference data and clear limits on identity confidence.
 26. **Advanced correlation:** link evidence from multiple hosts or a broader investigation only when identity and clock assumptions can be shown and tested.
 
-**Recommended next release:** upgrades 1–4. They make the current CSV workflow more reliable before adding complex Windows evidence sources or persistent case storage.
+**Recommended next phase:** start with upgrade 5, using carefully validated provider-and-channel-specific Windows Event Viewer export mappings before adding more complex evidence sources.
