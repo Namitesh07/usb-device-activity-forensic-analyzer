@@ -1,0 +1,3 @@
+Date and Time,Source,Event ID,Channel,Computer,DeviceId,EventRecordID
+2026-01-15T10:00:00.123456789Z,Microsoft-Windows-Security-Auditing,6416,Security,LAB-PC-01,USBSTOR\Disk&Ven_Demo&Prod_Storage\DEMO001,42
+2026-01-15T10:08:00Z,Microsoft-Windows-Security-Auditing,6416,Security,LAB-PC-01,USBSTOR\Disk&Ven_Demo&Prod_Storage\DEMO001,43

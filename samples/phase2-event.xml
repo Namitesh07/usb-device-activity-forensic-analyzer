@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Events xmlns="http://schemas.microsoft.com/win/2004/08/events/event">
+  <Event>
+    <System><Provider Name="Microsoft-Windows-Security-Auditing"/><EventID>6416</EventID><TimeCreated SystemTime="2026-01-15T10:00:00.123456789Z"/><EventRecordID>42</EventRecordID><Channel>Security</Channel><Computer>LAB-PC-01</Computer></System>
+    <EventData><Data Name="SubjectUserName">SYSTEM</Data><Data Name="DeviceId">USBSTOR\Disk&amp;Ven_Demo&amp;Prod_Storage\DEMO001</Data></EventData>
+  </Event>
+  <Event>
+    <System><Provider Name="Other-Provider"/><EventID>6416</EventID><TimeCreated SystemTime="2026-01-15T10:01:00Z"/><EventRecordID>43</EventRecordID><Channel>Security</Channel><Computer>LAB-PC-01</Computer></System>
+    <EventData><Data Name="DeviceId">USBSTOR\Disk&amp;Ven_Demo&amp;Prod_Storage\DEMO001</Data></EventData>
+  </Event>
+</Events>

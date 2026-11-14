@@ -1,0 +1,4 @@
+Windows Registry Editor Version 5.00
+
+[HKEY_LOCAL_MACHINE\SYSTEM\ControlSet001\Enum\USBSTOR\Disk&Ven_Demo&Prod_Storage\DEMO001]
+"FriendlyName"="Fictional demonstration drive"

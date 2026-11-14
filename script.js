@@ -1,9 +1,9 @@
 (function () {
   'use strict';
   const $ = id => document.getElementById(id);
-  const A = window.USBAnalysis, P = window.USBPhase1;
+  const A = window.USBAnalysis, P = window.USBPhase1, E = window.USBPhase2;
   const state = { files: [], draftSources: [], draftConfigs: {}, caseSources: [], caseConfigs: {}, resolutions: {},
-    data: null, filtered: [], stats: null, eventPage: 0, devicePage: 0, issuePage: 0, busy: false, filterTimer: null };
+    data: null, correlations: null, filtered: [], stats: null, eventPage: 0, devicePage: 0, issuePage: 0, busy: false, filterTimer: null };
   const PAGE_SIZE = 20, DEVICE_PAGE_SIZE = 10, ISSUE_PAGE_SIZE = 10;
   const FIELD_LABELS = { timestamp: 'Timestamp', event_type: 'Prepared event label', device_id: 'Device ID', computer: 'Computer', username: 'User' };
   const number = value => new Intl.NumberFormat().format(value);
@@ -26,7 +26,7 @@
     state.busy = busy;
     $('prepare').disabled = busy || !state.files.length;
     $('analyze').disabled = busy || !state.draftSources.length || !$('mapping-confirm').checked;
-    $('demo').disabled = busy; $('demo-multi').disabled = busy; $('demo-top').disabled = busy; $('file-input').disabled = busy;
+    $('demo').disabled = busy; $('demo-multi').disabled = busy; $('demo-phase2').disabled = busy; $('demo-top').disabled = busy; $('file-input').disabled = busy;
     $('mapping-confirm').disabled = busy;
     $('preview-sources').querySelectorAll('input, select').forEach(control => { control.disabled = busy; });
     $('clear-case').disabled = busy;
@@ -41,8 +41,8 @@
     const files = Array.from(fileList || []);
     if (!files.length) return;
     state.files = []; resetDraft();
-    if (files.length > P.MAX_FILES) { setText('file-label', 'No files selected'); status('status', 'Choose no more than 20 CSV files at once.', true); setBusy(false); return; }
-    if (files.some(file => !/\.csv$/i.test(file.name))) { setText('file-label', 'No files selected'); status('status', 'Choose prepared files with a .csv extension.', true); setBusy(false); return; }
+    if (files.length > P.MAX_FILES) { setText('file-label', 'No files selected'); status('status', 'Choose no more than 20 files at once.', true); setBusy(false); return; }
+    if (files.some(file => !/\.(?:csv|xml|evtx|log|txt|reg)$/i.test(file.name))) { setText('file-label', 'No files selected'); status('status', 'Choose .csv, .xml, .evtx, .log, .txt, or .reg files.', true); setBusy(false); return; }
     if (files.reduce((sum, file) => sum + file.size, 0) > P.MAX_BYTES) { setText('file-label', 'No files selected'); status('status', 'Combined file size exceeds the 20 MiB limit.', true); setBusy(false); return; }
     state.files = files;
     setText('file-label', number(files.length) + (files.length === 1 ? ' file' : ' files') + ' selected · ' + number(files.reduce((sum, f) => sum + f.size, 0)) + ' bytes');
@@ -56,22 +56,22 @@
 
   async function prepareFiles(sample) {
     if (state.busy || (!sample && !state.files.length)) return;
-    setBusy(true); status('status', sample ? 'Preparing fictional sample data…' : 'Reading and fingerprinting the selected CSV files locally…');
+    setBusy(true); status('status', sample ? 'Preparing fictional sample data…' : 'Reading and fingerprinting the selected evidence locally…');
     try {
       await new Promise(resolve => requestAnimationFrame(resolve));
-      const inputs = sample === 'multi' ? window.USB_PHASE1_SAMPLE_FILES.map(file => ({ name: file.name, bytes: new TextEncoder().encode(file.content) })) :
+      const inputs = sample === 'phase2' ? window.USB_PHASE2_SAMPLE_FILES.map(file => ({ name: file.name, bytes: new TextEncoder().encode(file.content) })) : sample === 'multi' ? window.USB_PHASE1_SAMPLE_FILES.map(file => ({ name: file.name, bytes: new TextEncoder().encode(file.content) })) :
         sample ? [{ name: 'fictional_usb_activity.csv (sample)', bytes: new TextEncoder().encode(window.USB_SAMPLE_CSV) }] : state.files;
       const sources = [];
       for (let i = 0; i < inputs.length; i++) {
         const item = inputs[i], bytes = await P.readInputBytes(item);
-        sources.push(await P.prepareSource(bytes, item.name, 'S' + String(i + 1).padStart(2, '0')));
+        sources.push(await E.prepareInput(bytes, item.name, 'S' + String(i + 1).padStart(2, '0')));
         P.validateCollection(sources);
       }
       const configs = {};
-      sources.forEach(source => { configs[source.id] = { mapping: { ...source.suggestedMapping }, zone: sample === 'multi' ? { mode: 'iana', value: 'America/New_York' } : { mode: 'fixed', value: '+00:00' } }; });
+      sources.forEach(source => { configs[source.id] = { mapping: { ...source.suggestedMapping }, host: sample === 'phase2' && source.format !== 'Windows Event CSV' ? 'LAB-PC-01' : '', channel: '', zone: sample === 'multi' ? { mode: 'iana', value: 'America/New_York' } : { mode: 'fixed', value: '+00:00' } }; });
       state.draftSources = sources; state.draftConfigs = configs;
       $('file-input').value = '';
-      if (sample) { state.files = []; setText('file-label', sample === 'multi' ? 'Fictional two-file demo selected' : 'Fictional sample selected'); }
+      if (sample) { state.files = []; setText('file-label', sample === 'phase2' ? 'Fictional Windows evidence demo selected' : sample === 'multi' ? 'Fictional two-file demo selected' : 'Fictional sample selected'); }
       $('mapping-confirm').checked = false; $('preview').hidden = false;
       renderPreview();
       status('status', number(sources.length) + (sources.length === 1 ? ' source ready' : ' sources ready') + ' for review.');
@@ -84,6 +84,7 @@
   $('prepare').addEventListener('click', () => prepareFiles(false));
   $('demo').addEventListener('click', () => prepareFiles(true));
   $('demo-multi').addEventListener('click', () => prepareFiles('multi'));
+  $('demo-phase2').addEventListener('click', () => prepareFiles('phase2')); 
   $('demo-top').addEventListener('click', () => prepareFiles(true));
   function mappingChanged() {
     $('mapping-confirm').checked = false; setBusy(state.busy);
@@ -102,8 +103,19 @@
       const cfg = state.draftConfigs[source.id], card = create('article', 'preview-card');
       const heading = create('div', 'preview-card-heading');
       const title = create('div'); title.appendChild(create('span', 'source-id', source.id)); title.appendChild(create('strong', '', source.filename)); heading.appendChild(title);
-      heading.appendChild(create('span', 'muted small', number(source.rows.length) + ' records')); card.appendChild(heading);
+      heading.appendChild(create('span', 'muted small', number(source.rows.length) + ' records' + ((source.artifacts || []).length ? ' · ' + number(source.artifacts.length) + ' registry keys' : ''))); card.appendChild(heading);
+      card.appendChild(create('p', 'muted small', source.format || 'Prepared CSV'));
       card.appendChild(create('p', 'source-fingerprint', 'SHA-256: ' + source.sha256));
+      if (source.adapter) {
+        card.appendChild(create('p', 'muted small', 'Fields use the selected Windows evidence adapter. Raw or decoded source details remain in the source_record field.'));
+        const contextGrid = create('div', 'zone-grid');
+        const hostLabel = create('label', '', 'Host if absent from source (optional)');
+        const host = create('input'); host.type = 'text'; host.value = cfg.host; host.maxLength = 255; host.addEventListener('input', () => { cfg.host = host.value; mappingChanged(); }); hostLabel.appendChild(host);
+        const channelLabel = create('label', '', 'Channel if absent from event (optional)');
+        const channel = create('input'); channel.type = 'text'; channel.value = cfg.channel; channel.maxLength = 255; channel.placeholder = 'e.g. Security'; channel.addEventListener('input', () => { cfg.channel = channel.value; mappingChanged(); }); channelLabel.appendChild(channel);
+        contextGrid.append(hostLabel, channelLabel); card.appendChild(contextGrid);
+        card.appendChild(create('p', 'muted small', 'Host and channel entries are analyst-supplied context and apply only when missing; they are used when analysis starts.'));
+      } else {
       const mappingGrid = create('div', 'mapping-grid');
       P.FIELDS.forEach(field => {
         const label = create('label', '', FIELD_LABELS[field] + (P.REQUIRED.includes(field) ? ' *' : ' (optional)'));
@@ -115,6 +127,7 @@
         label.appendChild(select); mappingGrid.appendChild(label);
       });
       card.appendChild(mappingGrid);
+      }
       const zoneGrid = create('div', 'zone-grid');
       const modeLabel = create('label', '', 'Timezone for timestamps without an offset');
       const mode = create('select'); mode.appendChild(option('fixed', 'Fixed UTC offset')); mode.appendChild(option('iana', 'IANA time zone')); mode.value = cfg.zone.mode; modeLabel.appendChild(mode);
@@ -154,13 +167,14 @@
     setBusy(true); status('preview-status', 'Analyzing reviewed records locally…');
     try {
       await new Promise(resolve => requestAnimationFrame(resolve));
-      const configs = Object.fromEntries(state.draftSources.map(s => [s.id, { mapping: { ...state.draftConfigs[s.id].mapping }, zone: { ...state.draftConfigs[s.id].zone } }]));
-      const data = P.analyzeSources(state.draftSources, configs, {});
-      state.caseSources = state.draftSources.slice(); state.caseConfigs = configs; state.resolutions = {}; state.data = data;
+      const configs = Object.fromEntries(state.draftSources.map(s => [s.id, { mapping: { ...state.draftConfigs[s.id].mapping }, zone: { ...state.draftConfigs[s.id].zone }, host:state.draftConfigs[s.id].host, channel:state.draftConfigs[s.id].channel }]));
+      const reviewedSources = state.draftSources.map(s => E.materialize(s, configs[s.id]));
+      const data = P.analyzeSources(reviewedSources, configs, {});
+      state.caseSources = reviewedSources; state.caseConfigs = configs; state.resolutions = {}; state.data = data;
       $('search').value = ''; $('event-type').value = 'all'; $('quality-filter').value = 'all';
       state.eventPage = 0; state.devicePage = 0; state.issuePage = 0; $('results').hidden = false;
       $('quality-panel').open = data.unresolvedTimes > 0;
-      renderSources(); renderQuality(); applyFilters();
+      renderSources(); renderQuality(); renderCrossSource(); applyFilters();
       status('preview-status', 'Analysis complete. Review any quality entries before drawing conclusions.');
       status('status', number(data.events.length) + ' accepted records; ' + number(data.skipped) + ' skipped.');
       status('export-status', ''); status('resolution-status', '');
@@ -179,6 +193,7 @@
     data.sources.forEach(source => {
       const item = create('article', 'source-item');
       item.appendChild(create('strong', '', source.id + ' · ' + source.filename));
+      item.appendChild(create('p', 'muted small', (source.format || 'Prepared CSV') + (source.artifactCount ? ' · ' + number(source.artifactCount) + ' registry keys' : '') + (source.context.host ? ' · analyst-supplied host: ' + source.context.host : '') + (source.context.channel ? ' · analyst-supplied channel: ' + source.context.channel : '')));
       item.appendChild(create('p', 'source-fingerprint', 'SHA-256: ' + source.sha256));
       item.appendChild(create('p', 'muted small', 'Records: ' + number(source.totalRecords) + ' · accepted: ' + number(source.accepted) + ' · skipped: ' + number(source.skipped) + ' · timezone: ' + source.zone.mode + ' ' + source.zone.value));
       const list = create('ul', 'mapping-list');
@@ -253,7 +268,7 @@
       if (resolution) decisions[recordKey] = resolution; else delete decisions[recordKey];
       const data = P.analyzeSources(state.caseSources, state.caseConfigs, decisions);
       state.resolutions = decisions; state.data = data;
-      renderSources(); renderQuality(); applyFilters();
+      renderSources(); renderQuality(); renderCrossSource(); applyFilters();
       status('resolution-status', resolution ? 'Timestamp decision applied. The original source fields are retained.' : 'Decision cleared; the unresolved row is skipped again.');
     } catch (error) { status('resolution-status', error.message || 'Could not apply this timestamp decision.', true); }
   }
@@ -265,6 +280,29 @@
     if ((state.issuePage + 1) * ISSUE_PAGE_SIZE < total) { state.issuePage++; renderQuality(); }
   });
 
+  function renderCrossSource() {
+    state.correlations = E.correlate(state.data.events, state.caseSources);
+    const result = state.correlations, root = $('correlation-list'); root.replaceChildren();
+    setText('correlation-summary', number(result.pairs.length) + ' associations' + (result.truncated ? ' (limit of 500 reached; additional matches may exist)' : '') + ' · ' + number(result.conflicts.length) + ' IDs observed on different hosts (up to 100). Dataset-wide; showing the first 25 of each.');
+    if (!result.pairs.length) root.appendChild(create('p', 'muted small', 'No associations found. Records without a host or full device ID are not matched.'));
+    result.pairs.slice(0,25).forEach(pair => {
+      const card = create('article', 'issue-card');
+      card.appendChild(create('strong', '', pair.kind + ' · ' + pair.a.deviceId));
+      card.appendChild(create('p', 'muted small', pair.a.source.id + ' record ' + pair.a.recordNumber + ' (' + pair.a.timestamp + ') ↔ ' + pair.b.source.id + ' record ' + pair.b.recordNumber + ' (' + pair.b.timestamp + ')'));
+      card.appendChild(create('p', 'muted small', pair.reason)); root.appendChild(card);
+    });
+    result.conflicts.slice(0,25).forEach(pair => {
+      const card = create('article', 'issue-card');
+      card.appendChild(create('strong', '', pair.kind + ' · ' + pair.a.deviceId));
+      card.appendChild(create('p', 'muted small', pair.a.computer + ' · ' + pair.a.source.id + ' record ' + pair.a.recordNumber + ' ↔ ' + pair.b.computer + ' · ' + pair.b.source.id + ' record ' + pair.b.recordNumber));
+      card.appendChild(create('p', 'muted small', pair.reason)); root.appendChild(card);
+    });
+    const artifacts = state.caseSources.flatMap(source => (source.artifacts || []).map(a => ({ ...a, source })));
+    $('registry-panel').hidden = artifacts.length === 0;
+    const list = $('registry-list'); list.replaceChildren();
+    if (artifacts.length) list.appendChild(create('p', 'muted small', number(artifacts.length) + ' keys · showing the first 50; export for the complete list.'));
+    artifacts.slice(0,50).forEach(a => { const item=create('article','source-item'); item.appendChild(create('strong','',a.deviceId)); item.appendChild(create('p','muted small',a.source.id + ' · line ' + a.line + ' · host: ' + (a.computer || 'not provided'))); item.appendChild(create('p','muted small',a.keyPath)); list.appendChild(item); });
+  }
   function applyFilters() {
     if (!state.data) return;
     clearTimeout(state.filterTimer); state.filterTimer = null;
@@ -305,7 +343,7 @@
       const row = create('tr'); cell(row, event.timestamp, 'mono');
       const typeCell = create('td'), type = create('span', 'event-badge ' + event.eventType, event.eventType);
       if (event.originalEventType && event.originalEventType.toLowerCase() !== event.eventType) type.title = 'Original label: ' + event.originalEventType;
-      typeCell.appendChild(type); row.appendChild(typeCell);
+      typeCell.appendChild(type); if (event.source.format && event.source.format !== 'Prepared CSV') typeCell.appendChild(create('small', 'event-context', event.originalEventType)); row.appendChild(typeCell);
       cell(row, event.deviceId, 'mono'); cell(row, event.computer); cell(row, event.username);
       const sourceCell = create('td'); sourceCell.appendChild(create('span', '', event.source.id + ' · ' + event.source.filename));
       sourceCell.appendChild(create('small', 'event-context', event.timeBasis + (event.duplicateOf ? ' · duplicate candidate' : '')));
@@ -340,15 +378,17 @@
     if (state.filterTimer) applyFilters();
     download('usb-activity-filtered.csv', P.exportEventsCSVChunks(state.data, state.filtered), 'text/csv;charset=utf-8');
   });
+  $('export-correlations').addEventListener('click', () => download('usb-source-associations.csv', E.exportCorrelations(state.correlations), 'text/csv;charset=utf-8'));
+  $('export-registry').addEventListener('click', () => download('usb-registry-keys.csv', E.exportArtifacts(state.caseSources), 'text/csv;charset=utf-8'));
   $('export-issues').addEventListener('click', () => download('usb-activity-quality.csv', P.exportIssuesCSVChunks(state.data), 'text/csv;charset=utf-8'));
   $('export-report').addEventListener('click', () => {
     if (state.filterTimer) applyFilters();
-    download('usb-activity-triage-report.txt', P.reportText(state.data, state.filtered, $('search').value.trim(), $('event-type').value), 'text/plain;charset=utf-8');
+    download('usb-activity-triage-report.txt', P.reportText(state.data, state.filtered, $('search').value.trim(), $('event-type').value) + '\nCROSS-SOURCE REVIEW\n' + state.correlations.pairs.length + ' candidate associations' + (state.correlations.truncated ? ' (maximum reached; more may exist)' : '') + '. Export associations for details.\nRegistry keys: ' + state.caseSources.reduce((n,s) => n + (s.artifacts || []).length, 0) + '. Registry key exports have no connection timestamp.\n', 'text/plain;charset=utf-8');
   });
   $('clear-case').addEventListener('click', () => {
     clearTimeout(state.filterTimer); state.data = null; state.files = []; state.caseSources = []; state.caseConfigs = {}; state.resolutions = {};
     state.filtered = []; state.stats = null; resetDraft(); $('file-input').value = ''; $('search').value = ''; $('event-type').value = 'all';
-    $('results').hidden = true; setText('file-label', 'No files selected'); status('status', 'Case cleared from this tab. Choose CSV files or load the sample.');
+    $('results').hidden = true; setText('file-label', 'No files selected'); status('status', 'Case cleared from this tab. Choose evidence files or load the sample.');
     setBusy(false); scrollToElement($('workspace-title'));
   });
 })();
