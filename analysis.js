@@ -19,11 +19,11 @@
   }
 
   // Unlike Date.parse(), this validates every calendar component and preserves
-  // up to six fractional digits instead of silently discarding microseconds.
+  // up to nine fractional digits instead of silently discarding precision.
   function parseTimestamp(value, assumedOffset) {
     const text = String(value).trim();
-    const m = /^(\d{4})-(\d{2})-(\d{2})[T ](\d{2}):(\d{2})(?::(\d{2})(?:[.,](\d{1,6}))?)?([Zz]|[+-]\d{2}:\d{2})?$/.exec(text);
-    if (!m) throw new Error('invalid ISO date and time (maximum six fractional digits)');
+    const m = /^(\d{4})-(\d{2})-(\d{2})[T ](\d{2}):(\d{2})(?::(\d{2})(?:[.,](\d{1,9}))?)?([Zz]|[+-]\d{2}:\d{2})?$/.exec(text);
+    if (!m) throw new Error('invalid ISO date and time (maximum nine fractional digits)');
     const [year, month, day, hour, minute, second] = m.slice(1, 7).map((v, i) => i === 5 && v === undefined ? 0 : Number(v));
     if (year < 1 || month < 1 || month > 12 || day < 1 || hour > 23 || minute > 59 || second > 59) {
       throw new Error('invalid ISO date and time');
@@ -35,15 +35,16 @@
       throw new Error('invalid calendar date');
     }
     const offset = !m[8] ? assumedOffset : /^[Zz]$/.test(m[8]) ? 0 : parseOffset(m[8]);
-    const fraction = (m[7] || '').padEnd(6, '0');
-    const micros = Number(fraction || 0);
-    const ms = d.getTime() - offset * 60000 + Math.floor(micros / 1000);
+    const nanos = Number((m[7] || '').padEnd(9, '0') || 0);
+    const ms = d.getTime() - offset * 60000 + Math.floor(nanos / 1000000);
     const utc = new Date(ms);
     if (utc.getUTCFullYear() < 1 || utc.getUTCFullYear() > 9999) {
       throw new Error('timestamp is outside the supported UTC date range');
     }
     const base = utc.toISOString().slice(0, 19);
-    return { utc: base + (micros ? '.' + String(micros).padStart(6, '0') : '') + 'Z', ms, microRemainder: micros % 1000, naive: !m[8] };
+    const precision = (m[7] || '').length > 6 ? 9 : 6;
+    const fraction = String(nanos).padStart(9, '0').slice(0, precision);
+    return { utc: base + (nanos ? '.' + fraction : '') + 'Z', ms, microRemainder: Math.floor(nanos / 1000) % 1000, nanoRemainder: nanos % 1000, precision, naive: !m[8] };
   }
 
   // Strict, RFC-style parsing preserves quoted commas, quotes, and newlines.
@@ -117,11 +118,11 @@
       catch (error) { issues.push(`Record ${recordNumber}: ${error.message}.`); continue; }
       if (time.naive) naiveTimestamps++;
       const originalEventType = get('event_type');
-      events.push({ timestamp: time.utc, ms: time.ms, microRemainder: time.microRemainder,
+      events.push({ timestamp: time.utc, ms: time.ms, microRemainder: time.microRemainder, nanoRemainder: time.nanoRemainder,
         originalTimestamp, eventType: normalizeType(originalEventType), originalEventType,
         deviceId: get('device_id'), computer: get('computer'), username: get('username'), recordNumber });
     }
-    events.sort((a, b) => a.ms - b.ms || a.microRemainder - b.microRemainder || a.recordNumber - b.recordNumber);
+    events.sort((a, b) => a.ms - b.ms || a.microRemainder - b.microRemainder || (a.nanoRemainder || 0) - (b.nanoRemainder || 0) || a.recordNumber - b.recordNumber);
     return { events, issues, totalRecords: rows.length, naiveTimestamps, assumedOffset: String(offsetText).trim() };
   }
 

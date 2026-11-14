@@ -1,0 +1,5 @@
+# EVTX parser dependency
+
+The files `evtx_wasm.js` and `evtx_wasm_bg.wasm` are the prebuilt WebAssembly wrapper distributed with [LUMEN](https://github.com/Koifman/LUMEN), pinned to commit `87ad11870352c28f3ad8526a15971bcea45f43db` (MIT; see `LICENSE`). LUMEN identifies the parser core as the [evtx](https://github.com/omerbenamram/evtx) Rust library (MIT option; see `LICENSE-EVTX-MIT`). The original `.evtx` files are processed locally and are never sent to the parser authors.
+
+The prebuilt binary SHA-256 is `5f65580bfdca01d3269b524c3afad8bd5537e5161bef9dd5c8ec5714cc9621bc`; the JavaScript wrapper SHA-256 is `5666d4a6d7cdadde49ed807e64b9d71c5287c83be2f4a1ab5fd3c9814ab9f762`. LUMEN's repository distributes these prebuilt artifacts without the corresponding Rust wrapper source or lockfile, so their exact dependency versions cannot all be independently rebuilt from that repository. Validate important cases with independent tools and revisit the dependency when a reproducible build is available.

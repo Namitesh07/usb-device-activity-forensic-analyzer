@@ -52,11 +52,11 @@
     return { id: String(id), filename: String(filename), size: bytes.byteLength, sha256, headers, rows, suggestedMapping: suggestMapping(headers) };
   }
   function validateCollection(sources) {
-    if (!Array.isArray(sources) || !sources.length) throw new Error('Choose at least one prepared CSV.');
-    if (sources.length > MAX_FILES) throw new Error('Choose no more than 20 CSV files at once.');
+    if (!Array.isArray(sources) || !sources.length) throw new Error('Choose at least one evidence file.');
+    if (sources.length > MAX_FILES) throw new Error('Choose no more than 20 files at once.');
     if (new Set(sources.map(s => s.id)).size !== sources.length) throw new Error('Source identifiers must be unique.');
-    if (sources.reduce((sum, s) => sum + s.size, 0) > MAX_BYTES) throw new Error('Combined CSV size exceeds 20 MiB.');
-    if (sources.reduce((sum, s) => sum + s.rows.length, 0) > MAX_RECORDS) throw new Error('Combined CSVs exceed the 100,000-record input limit.');
+    if (sources.reduce((sum, s) => sum + s.size, 0) > MAX_BYTES) throw new Error('Combined file size exceeds 20 MiB.');
+    if (sources.reduce((sum, s) => sum + s.rows.length + (s.artifacts || []).length, 0) > MAX_RECORDS) throw new Error('Combined sources exceed the 100,000-record input limit.');
   }
   function validateMapping(source, mapping) {
     if (!mapping || typeof mapping !== 'object') throw new Error(`${source.filename}: choose the column mappings.`);
@@ -111,9 +111,9 @@
     offsetCache.set(key, result);
     return result;
   }
-  function utcString(ms, microRemainder) {
-    const d = new Date(ms), fraction = d.getUTCMilliseconds() * 1000 + microRemainder;
-    return d.toISOString().slice(0, 19) + (fraction ? '.' + String(fraction).padStart(6, '0') : '') + 'Z';
+  function utcString(ms, microRemainder, nanoRemainder, precision) {
+    const d = new Date(ms), fraction = d.getUTCMilliseconds() * 1000000 + microRemainder * 1000 + (nanoRemainder || 0);
+    return d.toISOString().slice(0, 19) + (fraction ? '.' + String(fraction).padStart(9, '0').slice(0, precision || 6) : '') + 'Z';
   }
   function offsetString(seconds) {
     const sign = seconds < 0 ? '-' : '+', n = Math.abs(seconds);
@@ -127,7 +127,7 @@
     const matches = [];
     for (const seconds of offsetsNearDay(zone, wall.ms)) {
       const ms = wall.ms - seconds * 1000;
-      if (partsAsUTC(ms, fmt) === roundedWall) matches.push({ ms, microRemainder: wall.microRemainder, utc: utcString(ms, wall.microRemainder), offset: offsetString(seconds) });
+      if (partsAsUTC(ms, fmt) === roundedWall) matches.push({ ms, microRemainder: wall.microRemainder, nanoRemainder: wall.nanoRemainder, precision: wall.precision, utc: utcString(ms, wall.microRemainder, wall.nanoRemainder, wall.precision), offset: offsetString(seconds) });
     }
     return matches.sort((a, b) => a.ms - b.ms).filter((x, i, all) => i === 0 || x.ms !== all[i - 1].ms);
   }
@@ -173,6 +173,7 @@
       validateMapping(source, config.mapping);
       const zone = validateZone(config.zone), mapping = { ...config.mapping }, mappingDescription = mappingInfo(source, mapping);
       const meta = { id: source.id, filename: source.filename, size: source.size, sha256: source.sha256, headers: source.headers,
+        format: source.format || 'Prepared CSV', context: source.context || {}, artifactCount: (source.artifacts || []).length,
         mapping: mappingDescription, zone, totalRecords: source.rows.length, accepted: 0, skipped: 0, naiveTimestamps: 0 };
       info.push(meta);
       const rawField = (row, name) => Number.isInteger(mapping[name]) ? String(row[mapping[name]] ?? '') : '';
@@ -187,7 +188,7 @@
         if (first) { duplicateCandidates++; issue('duplicate_candidate', `Mapped fields match ${first.sourceId}, record ${first.recordNumber}. Other fields may differ; this is not proof of a duplicate.`, { duplicateOf: first }); }
         else seen.set(duplicateKey, { sourceId: source.id, filename: source.filename, recordNumber });
         const type = A.normalizeType(fields.event_type);
-        if (type === 'other') issue('unknown_event_type', 'Event label is unrecognized or blank; retained as other when its timestamp is usable.');
+        if (type === 'other' && !source.adapter) issue('unknown_event_type', 'Event label is unrecognized or blank; retained as other when its timestamp is usable.');
         if (!fields.device_id.trim()) issue('missing_device_id', 'Device ID is missing; the record cannot contribute to device counts.');
         if (row.length > source.headers.length) {
           skipped++; meta.skipped++; issue('extra_values', 'More field values than headers; this record is excluded.'); return;
@@ -202,14 +203,14 @@
         if (!explicitOffset) { naiveTimestamps++; meta.naiveTimestamps++; }
         meta.accepted++;
         const time = result.time;
-        events.push({ timestamp: time.utc, ms: time.ms, microRemainder: time.microRemainder,
+        events.push({ timestamp: time.utc, ms: time.ms, microRemainder: time.microRemainder, nanoRemainder: time.nanoRemainder,
           originalTimestamp: fields.timestamp, eventType: type, originalEventType: fields.event_type,
           deviceId: fields.device_id.trim(), computer: fields.computer.trim(), username: fields.username.trim(),
           recordNumber, recordKey, source: meta, originalHeaders: source.headers, originalValues: row,
           timeBasis: result.basis, resolvedInput: result.resolvedInput, duplicateOf: first || null });
       });
     }
-    events.sort((a, b) => a.ms - b.ms || a.microRemainder - b.microRemainder || a.source.id.localeCompare(b.source.id) || a.recordNumber - b.recordNumber);
+    events.sort((a, b) => a.ms - b.ms || a.microRemainder - b.microRemainder || (a.nanoRemainder || 0) - (b.nanoRemainder || 0) || a.source.id.localeCompare(b.source.id) || a.recordNumber - b.recordNumber);
     return { sources: info, events, issues, totalRecords: sources.reduce((sum, s) => sum + s.rows.length, 0), skipped,
       naiveTimestamps, duplicateCandidates, unresolvedTimes };
   }
@@ -230,12 +231,12 @@
     return chunks;
   }
   function exportEventsCSVChunks(data, events) {
-    const headers = ['timestamp_utc','timestamp_original','timestamp_basis','analyst_timestamp_decision','event_type','event_type_original','device_id','computer','username','source_id','source_file','source_sha256','source_record','source_timezone','source_column_mapping_json','original_headers_json','original_values_json','duplicate_candidate_of'];
-    return csvChunks(headers, events, e => [e.timestamp,e.originalTimestamp,e.timeBasis,e.resolvedInput,e.eventType,e.originalEventType,e.deviceId,e.computer,e.username,e.source.id,e.source.filename,e.source.sha256,e.recordNumber,`${e.source.zone.mode}: ${e.source.zone.value}`,JSON.stringify(e.source.mapping),JSON.stringify(e.originalHeaders),JSON.stringify(e.originalValues),e.duplicateOf ? `${e.duplicateOf.sourceId}:${e.duplicateOf.recordNumber}` : '']);
+    const headers = ['timestamp_utc','timestamp_original','timestamp_basis','analyst_timestamp_decision','event_type','event_type_original','device_id','computer','username','source_id','source_file','source_sha256','source_record','source_timezone','source_format','analyst_supplied_context_json','source_column_mapping_json','original_headers_json','original_values_json','duplicate_candidate_of'];
+    return csvChunks(headers, events, e => [e.timestamp,e.originalTimestamp,e.timeBasis,e.resolvedInput,e.eventType,e.originalEventType,e.deviceId,e.computer,e.username,e.source.id,e.source.filename,e.source.sha256,e.recordNumber,`${e.source.zone.mode}: ${e.source.zone.value}`,e.source.format,JSON.stringify(e.source.context),JSON.stringify(e.source.mapping),JSON.stringify(e.originalHeaders),JSON.stringify(e.originalValues),e.duplicateOf ? `${e.duplicateOf.sourceId}:${e.duplicateOf.recordNumber}` : '']);
   }
   function exportIssuesCSVChunks(data) {
-    const headers = ['issue_type','message','resolution_status','selected_timestamp','source_id','source_file','source_sha256','source_record','source_timezone','source_column_mapping_json','original_headers_json','original_values_json','candidate_times_json'];
-    return csvChunks(headers, data.issues, i => [i.code,i.message,i.resolved === true ? 'resolved' : i.resolved === false ? 'unresolved' : '',i.chosen || '',i.source.id,i.source.filename,i.source.sha256,i.recordNumber,`${i.source.zone.mode}: ${i.source.zone.value}`,JSON.stringify(i.source.mapping),JSON.stringify(i.originalHeaders),JSON.stringify(i.originalValues),JSON.stringify(i.candidates || [])]);
+    const headers = ['issue_type','message','resolution_status','selected_timestamp','source_id','source_file','source_sha256','source_record','source_timezone','source_format','analyst_supplied_context_json','source_column_mapping_json','original_headers_json','original_values_json','candidate_times_json'];
+    return csvChunks(headers, data.issues, i => [i.code,i.message,i.resolved === true ? 'resolved' : i.resolved === false ? 'unresolved' : '',i.chosen || '',i.source.id,i.source.filename,i.source.sha256,i.recordNumber,`${i.source.zone.mode}: ${i.source.zone.value}`,i.source.format,JSON.stringify(i.source.context),JSON.stringify(i.source.mapping),JSON.stringify(i.originalHeaders),JSON.stringify(i.originalValues),JSON.stringify(i.candidates || [])]);
   }
   function exportEventsCSV(data, events) { return exportEventsCSVChunks(data, events).join(''); }
   function exportIssuesCSV(data) { return exportIssuesCSVChunks(data).join(''); }
@@ -246,7 +247,7 @@
       `Source files: ${data.sources.length} | Source records: ${data.totalRecords} | Accepted: ${data.events.length} | Skipped: ${data.skipped}`,
       `Quality entries: ${data.issues.length} | Unresolved local times: ${data.unresolvedTimes} | Duplicate candidates: ${data.duplicateCandidates}`,
       `Filters — search: ${query || '(none)'} | event type: ${type || 'all'}`, '', 'SOURCE FILES AND IMPORT DECISIONS'];
-    data.sources.forEach(s => lines.push(`- ${s.id}: ${s.filename} | SHA-256: ${s.sha256} | records: ${s.totalRecords} | accepted: ${s.accepted} | skipped: ${s.skipped} | timezone: ${s.zone.mode} ${s.zone.value} | mapping: ${JSON.stringify(s.mapping)}`));
+    data.sources.forEach(s => lines.push(`- ${s.id}: ${s.filename} | SHA-256: ${s.sha256} | format: ${s.format} | records: ${s.totalRecords} | registry keys: ${s.artifactCount} | accepted: ${s.accepted} | skipped: ${s.skipped} | timezone: ${s.zone.mode} ${s.zone.value} | analyst context: ${JSON.stringify(s.context)} | mapping: ${JSON.stringify(s.mapping)}`));
     lines.push('', 'FILTERED RESULTS', `Records: ${stats.records}`, `Connection records: ${stats.connections}`, `Distinct nonempty device IDs: ${stats.devices.length}`,
       `IDs with at least two connection records: ${stats.repeated}`, `Records missing device ID: ${stats.missingIds}`, '', 'DEVICE SUMMARY (UTC)');
     if (!stats.devices.length) lines.push('No nonempty device IDs in the current view.');
@@ -255,7 +256,7 @@
     if (!data.issues.length) lines.push('No quality entries.');
     data.issues.slice(0, 20).forEach(i => lines.push(`- ${i.source.id} record ${i.recordNumber}: ${i.code} — ${i.message}${i.chosen ? ' Decision: ' + i.chosen : ''}`));
     if (data.issues.length > 20) lines.push(`... and ${data.issues.length - 20} more entries; use the quality CSV for all entries.`);
-    lines.push('', 'INTERPRETATION AND LIMITATIONS', 'Counts describe prepared records, not verified physical connections; all duplicate candidates are retained.',
+    lines.push('', 'INTERPRETATION AND LIMITATIONS', 'Counts describe source records, not verified physical connections; all duplicate candidates are retained.',
       'Matching mapped fields can describe distinct events. Repeated records are leads, not proof of unauthorized use.',
       'IANA results use the browser time-zone database. Analyst timestamp decisions are not source evidence.',
       'Preserve original files and validate collection, timestamps, event meanings, and findings independently.');
