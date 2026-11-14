@@ -2,7 +2,7 @@
 
 This is a proposed, dependency-ordered backlog, not a claim that the listed features already exist. Validate each release with representative fixtures and document its limits. Versions and scope can change as the project develops.
 
-The v1.2.0 browser release completes the Phase 1 prepared-CSV improvements locally on the user's device. Later phases remain future work.
+The v1.3.0 browser release adds the first Phase 2 evidence adapters and conservative correlation locally on the user's device. Broader event mappings and raw registry-hive parsing remain future work.
 
 ## Phase 1 — More dependable input (completed in v1.2.0)
 
@@ -11,12 +11,12 @@ The v1.2.0 browser release completes the Phase 1 prepared-CSV improvements local
 3. **Timezone handling:** use fixed offsets or IANA zones and review ambiguous or nonexistent local times. Original values, supported precision, and analyst decisions are retained. IANA interpretation of offset-free times covers 1970–2100.
 4. **Multiple input files:** combine up to 20 prepared CSVs with separate fingerprints and provenance; duplicate candidates are visible and all records are retained.
 
-## Phase 2 — Evidence adapters
+## Phase 2 — Evidence adapters (first implementation in v1.3.0)
 
-5. **Windows Event Viewer CSV/XML import:** create provider-and-channel-aware adapters, map fields conservatively, and test against documented fixtures. Explain what each mapped event does and does not establish.
-6. **Direct EVTX reading:** optionally parse local `.evtx` copies, document the parser dependency, handle errors and large files, and keep event record IDs, channel, provider, and source hash.
-7. **Offline Windows artifact support:** investigate tested parsing for relevant SetupAPI logs and registry artifacts such as USBSTOR. Distinguish installation, enumeration, and other artifacts from verified connection times.
-8. **Source correlation:** link records by host, identifier, and time while showing why they were associated and preserving uncertainty, conflicts, and provenance.
+5. **Windows Event Viewer CSV/XML:** implemented conservative metadata extraction and one documented provider/channel/ID mapping: Security event 6416. Other events are retained as unmapped. Localized dates and additional mappings need further work.
+6. **Direct EVTX reading:** bundled a locally executed WebAssembly parser with chunk error checks, source hash, event IDs, record IDs, provider and channel. Broader real-world fixtures and independent validation remain important.
+7. **Offline Windows artifacts:** added selected SetupAPI device-install sections and text `.reg` exports of USBSTOR instance keys. Raw registry hives and other device artifact families remain unsupported.
+8. **Source correlation:** reports same-host/full-ID records within five minutes, untimed registry identity links, and IDs seen on different hosts, with explanations and capped output. More advanced correlation needs further validation.
 
 ## Phase 3 — Analyst workflow
 
@@ -48,4 +48,4 @@ The v1.2.0 browser release completes the Phase 1 prepared-CSV improvements local
 25. **Removable-media enrichment:** optional offline vendor/product lookup and device metadata, with versioned reference data and clear limits on identity confidence.
 26. **Advanced correlation:** link evidence from multiple hosts or a broader investigation only when identity and clock assumptions can be shown and tested.
 
-**Recommended next phase:** start with upgrade 5, using carefully validated provider-and-channel-specific Windows Event Viewer export mappings before adding more complex evidence sources.
+**Recommended next phase:** improve analyst workflow while expanding the validated fixture corpus and Windows source coverage.

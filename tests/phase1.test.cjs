@@ -167,7 +167,7 @@ test('chunked downloads preserve every row across chunk boundaries', async () =>
 
 test('combined size, source count and record limits are enforced', () => {
   const fake = (id, size, count) => ({ id, size, rows: Array(count) });
-  assert.throws(() => P.validateCollection(Array.from({ length:21 }, (_,i) => fake(String(i),1,0))), /20 CSV/);
+  assert.throws(() => P.validateCollection(Array.from({ length:21 }, (_,i) => fake(String(i),1,0))), /20 files/);
   assert.throws(() => P.validateCollection([fake('a',P.MAX_BYTES,0),fake('b',1,0)]), /20 MiB/);
   assert.throws(() => P.validateCollection([fake('a',1,50001),fake('b',1,50000)]), /100,000/);
   assert.throws(() => P.validateCollection([fake('a',1,0),fake('a',1,0)]), /unique/);

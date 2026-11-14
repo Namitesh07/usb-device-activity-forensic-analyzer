@@ -32,7 +32,8 @@ test('timestamps validate calendar dates, offsets, UTC overflow and microsecond 
   assert.equal(data.events[1].timestamp, '2026-01-01T06:00:00.123456Z');
   assert.equal(data.naiveTimestamps, 1);
   assert.equal(A.parseTimestamp('1600-01-01T00:00:00Z', 0).utc, '1600-01-01T00:00:00Z');
-  for (const value of ['2026-02-30T00:00:00Z', '2026-01-01', '2026-01-01T12:00:00.1234567Z', '0001-01-01T00:00:00+23:00', '2026-01-01T25:00Z']) {
+  assert.equal(A.parseTimestamp('2026-01-01T12:00:00.123456789Z', 0).utc, '2026-01-01T12:00:00.123456789Z');
+  for (const value of ['2026-02-30T00:00:00Z', '2026-01-01', '2026-01-01T12:00:00.1234567890Z', '0001-01-01T00:00:00+23:00', '2026-01-01T25:00Z']) {
     assert.throws(() => A.parseTimestamp(value, 0), value);
   }
   assert.throws(() => A.parseOffset('+24:00'));
