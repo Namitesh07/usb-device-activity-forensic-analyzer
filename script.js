@@ -1,9 +1,9 @@
 (function () {
   'use strict';
   const $ = id => document.getElementById(id);
-  const A = window.USBAnalysis, P = window.USBPhase1, E = window.USBPhase2;
+  const A = window.USBAnalysis, P = window.USBPhase1, E = window.USBPhase2, W = window.USBPhase3;
   const state = { files: [], draftSources: [], draftConfigs: {}, caseSources: [], caseConfigs: {}, resolutions: {},
-    data: null, correlations: null, filtered: [], stats: null, eventPage: 0, devicePage: 0, issuePage: 0, busy: false, filterTimer: null };
+    data: null, correlations: null, filtered: [], stats: null, groups: [], zone: 'UTC', appliedFilters: {}, drill: null, drillPage: 0, artifactPage: 0, notes: [], noteTarget: {kind:'case',label:'Case'}, editingNote: null, eventPage: 0, devicePage: 0, issuePage: 0, busy: false, filterTimer: null };
   const PAGE_SIZE = 20, DEVICE_PAGE_SIZE = 10, ISSUE_PAGE_SIZE = 10;
   const FIELD_LABELS = { timestamp: 'Timestamp', event_type: 'Prepared event label', device_id: 'Device ID', computer: 'Computer', username: 'User' };
   const number = value => new Intl.NumberFormat().format(value);
@@ -164,14 +164,15 @@
 
   $('analyze').addEventListener('click', async () => {
     if (state.busy || !$('mapping-confirm').checked) return;
+    if (state.notes.length && !confirm('Analyzing a new case will discard the current in-memory notes. Export them first if needed. Continue?')) return;
     setBusy(true); status('preview-status', 'Analyzing reviewed records locally…');
     try {
       await new Promise(resolve => requestAnimationFrame(resolve));
       const configs = Object.fromEntries(state.draftSources.map(s => [s.id, { mapping: { ...state.draftConfigs[s.id].mapping }, zone: { ...state.draftConfigs[s.id].zone }, host:state.draftConfigs[s.id].host, channel:state.draftConfigs[s.id].channel }]));
       const reviewedSources = state.draftSources.map(s => E.materialize(s, configs[s.id]));
       const data = P.analyzeSources(reviewedSources, configs, {});
-      state.caseSources = reviewedSources; state.caseConfigs = configs; state.resolutions = {}; state.data = data;
-      $('search').value = ''; $('event-type').value = 'all'; $('quality-filter').value = 'all';
+      state.caseSources = reviewedSources; state.caseConfigs = configs; state.resolutions = {}; state.data = data; state.notes = []; state.drill = null; $('device-detail').hidden = true; selectNoteTarget({kind:'case',label:'Case'},true); renderNotes();
+      for(const id of ['search','filter-host','filter-user','filter-device','filter-start','filter-end'])$(id).value=''; $('event-type').value='all'; $('quality-filter').value='all'; $('filter-sort').value='asc'; $('display-mode').value='UTC'; $('display-zone').value='Asia/Kolkata'; $('device-group').value='host';
       state.eventPage = 0; state.devicePage = 0; state.issuePage = 0; $('results').hidden = false;
       $('quality-panel').open = data.unresolvedTimes > 0;
       renderSources(); renderQuality(); renderCrossSource(); applyFilters();
@@ -201,7 +202,7 @@
         const m = source.mapping[field], description = m ? 'column ' + m.column + ' (' + (m.header || 'blank header') + ')' : 'not mapped';
         list.appendChild(create('li', '', FIELD_LABELS[field] + ': ' + description));
       });
-      item.appendChild(list); root.appendChild(item);
+      item.appendChild(list); const noteButton = create('button','button quiet record-note-button','Note this source'); noteButton.type='button'; noteButton.addEventListener('click',()=>selectNoteTarget({kind:'source',id:source.id,sha256:source.sha256,label:source.id+' · '+source.filename})); item.appendChild(noteButton); root.appendChild(item);
     });
   }
   function originalDetails(headers, values, label) {
@@ -303,16 +304,22 @@
     if (artifacts.length) list.appendChild(create('p', 'muted small', number(artifacts.length) + ' keys · showing the first 50; export for the complete list.'));
     artifacts.slice(0,50).forEach(a => { const item=create('article','source-item'); item.appendChild(create('strong','',a.deviceId)); item.appendChild(create('p','muted small',a.source.id + ' · line ' + a.line + ' · host: ' + (a.computer || 'not provided'))); item.appendChild(create('p','muted small',a.keyPath)); list.appendChild(item); });
   }
+  function currentFilters() { return {query:$('search').value,type:$('event-type').value,host:$('filter-host').value,user:$('filter-user').value,device:$('filter-device').value,start:$('filter-start').value,end:$('filter-end').value,sort:$('filter-sort').value}; }
   function applyFilters() {
     if (!state.data) return;
     clearTimeout(state.filterTimer); state.filterTimer = null;
-    state.filtered = P.filterEvents(state.data.events, $('search').value, $('event-type').value);
-    state.stats = A.summarize(state.filtered); state.eventPage = 0; state.devicePage = 0;
-    renderSummary(); renderEvents(); renderDevices();
+    try {
+      const zone = $('display-mode').value === 'UTC' ? 'UTC' : W.validateZone($('display-zone').value);
+      const filters=currentFilters(), filtered = W.filter(state.data.events,filters);
+      state.appliedFilters=filters; $('export-csv').disabled=false; $('export-report').disabled=false; state.zone=zone; state.filtered=filtered; state.stats=A.summarize(filtered.slice().sort(W.compare));
+      state.groups=W.groups(filtered,$('device-group').value); state.eventPage=0; state.devicePage=0;
+      status('filter-status','Range boundaries are UTC (start inclusive, end exclusive). Times displayed in '+zone+'; charts remain in UTC.');
+      renderSummary(); renderEvents(); renderDevices(); if(state.drill) renderDrill();
+    } catch(error) {$('export-csv').disabled=true; $('export-report').disabled=true; status('filter-status',error.message+' Previous results remain visible; correct the filter before exporting.',true);}
   }
-  $('search').addEventListener('input', () => { clearTimeout(state.filterTimer); state.filterTimer = setTimeout(applyFilters, 120); });
-  $('event-type').addEventListener('change', applyFilters);
-  $('clear-filters').addEventListener('click', () => { $('search').value = ''; $('event-type').value = 'all'; applyFilters(); });
+  for(const id of ['search','filter-host','filter-user','filter-device','display-zone']) $(id).addEventListener('input',()=>{clearTimeout(state.filterTimer);state.filterTimer=setTimeout(applyFilters,120);});
+  for(const id of ['event-type','filter-start','filter-end','filter-sort','display-mode','device-group']) $(id).addEventListener('change',applyFilters);
+  $('clear-filters').addEventListener('click',()=>{for(const id of ['search','filter-host','filter-user','filter-device','filter-start','filter-end'])$(id).value='';$('event-type').value='all';$('filter-sort').value='asc';$('display-mode').value='UTC';$('display-zone').value='Asia/Kolkata';applyFilters();});
   function renderSummary() {
     const s = state.stats;
     setText('metric-records', number(s.records)); setText('metric-connections', number(s.connections));
@@ -340,7 +347,7 @@
     const page = state.filtered.slice(state.eventPage * PAGE_SIZE, (state.eventPage + 1) * PAGE_SIZE);
     if (!page.length) blankRow(body, 7, 'No records match this view.');
     page.forEach(event => {
-      const row = create('tr'); cell(row, event.timestamp, 'mono');
+      const row = create('tr'); cell(row, W.displayTime(event,state.zone), 'mono');
       const typeCell = create('td'), type = create('span', 'event-badge ' + event.eventType, event.eventType);
       if (event.originalEventType && event.originalEventType.toLowerCase() !== event.eventType) type.title = 'Original label: ' + event.originalEventType;
       typeCell.appendChild(type); if (event.source.format && event.source.format !== 'Prepared CSV') typeCell.appendChild(create('small', 'event-context', event.originalEventType)); row.appendChild(typeCell);
@@ -348,24 +355,37 @@
       const sourceCell = create('td'); sourceCell.appendChild(create('span', '', event.source.id + ' · ' + event.source.filename));
       sourceCell.appendChild(create('small', 'event-context', event.timeBasis + (event.duplicateOf ? ' · duplicate candidate' : '')));
       sourceCell.appendChild(originalDetails(event.originalHeaders, event.originalValues)); row.appendChild(sourceCell);
-      cell(row, String(event.recordNumber)); body.appendChild(row);
+      const recordCell=create('td'); recordCell.appendChild(create('span','',String(event.recordNumber))); const noteButton=create('button','button quiet record-note-button','Note record'); noteButton.type='button'; noteButton.addEventListener('click',()=>selectNoteTarget({kind:'record',id:event.recordKey,source:event.source.id,sourceSha256:event.source.sha256,record:event.recordNumber,label:event.source.id+' · record '+event.recordNumber})); recordCell.appendChild(noteButton); row.appendChild(recordCell); body.appendChild(row);
     });
     pageInfo(state.filtered.length, state.eventPage, PAGE_SIZE, 'events-page', 'events-prev', 'events-next');
   }
   function renderDevices() {
-    const body = $('device-rows'); body.replaceChildren(); const devices = state.stats.devices;
-    const page = devices.slice(state.devicePage * DEVICE_PAGE_SIZE, (state.devicePage + 1) * DEVICE_PAGE_SIZE);
-    if (!page.length) blankRow(body, 6, 'No nonempty device IDs in this view.');
-    page.forEach(device => {
-      const row = create('tr'); cell(row, device.deviceId, 'mono'); cell(row, String(device.connections)); cell(row, String(device.records));
-      cell(row, device.firstSeen, 'mono'); cell(row, device.lastSeen, 'mono'); cell(row, String(device.computers)); body.appendChild(row);
-    });
-    pageInfo(devices.length, state.devicePage, DEVICE_PAGE_SIZE, 'devices-page', 'devices-prev', 'devices-next');
+    const body=$('device-rows');body.replaceChildren();const devices=state.groups;
+    const page=devices.slice(state.devicePage*DEVICE_PAGE_SIZE,(state.devicePage+1)*DEVICE_PAGE_SIZE);
+    if(!page.length)blankRow(body,6,'No nonempty device IDs in this view.');
+    page.forEach(device=>{const row=create('tr'),first=create('td');const button=create('button','device-link',device.deviceId);button.type='button';button.addEventListener('click',()=>openDrill(device));first.appendChild(button);if(device.host!==null)first.appendChild(create('small','event-context',device.host||'Host not provided'));row.appendChild(first);cell(row,String(device.connections));cell(row,String(device.records));cell(row,W.displayTime(device.first,state.zone),'mono');cell(row,W.displayTime(device.last,state.zone),'mono');cell(row,String(device.hosts.size));body.appendChild(row);});
+    pageInfo(devices.length,state.devicePage,DEVICE_PAGE_SIZE,'devices-page','devices-prev','devices-next');
   }
+  function openDrill(device){state.drill={key:device.key,mode:$('device-group').value,deviceId:device.deviceId,host:device.host};state.drillPage=0;state.artifactPage=0;$('device-detail').hidden=false;renderDrill();$('device-detail-title').focus({preventScroll:true});scrollToElement($('device-detail'));}
+  function renderDrill(){if(!state.drill)return;const all=W.deviceEvents(state.data.events,state.drill.key,state.drill.mode);const hosts=new Set(all.map(e=>e.computer||'(host not provided)'));setText('device-detail-title',state.drill.deviceId);setText('device-detail-summary',(state.drill.mode==='host'?'Host: '+(state.drill.host||'not provided'):'Across hosts')+' · '+number(all.length)+' accepted records · hosts: '+[...hosts].join(', ')+' · displayed in '+state.zone);const root=$('device-detail-records');root.replaceChildren();for(const e of all.slice(state.drillPage*PAGE_SIZE,(state.drillPage+1)*PAGE_SIZE)){const card=create('article','issue-card');card.appendChild(create('strong','',W.displayTime(e,state.zone)+' · '+e.originalEventType));card.appendChild(create('p','muted small',(e.computer||'Host not provided')+' · '+e.source.id+' · '+e.source.filename+' · record '+e.recordNumber+' · SHA-256 '+e.source.sha256));card.appendChild(originalDetails(e.originalHeaders,e.originalValues));const button=create('button','button quiet record-note-button','Note record');button.type='button';button.addEventListener('click',()=>selectNoteTarget({kind:'record',id:e.recordKey,source:e.source.id,sourceSha256:e.source.sha256,record:e.recordNumber,label:e.source.id+' · record '+e.recordNumber}));card.appendChild(button);root.appendChild(card);}pageInfo(all.length,state.drillPage,PAGE_SIZE,'drill-page','drill-prev','drill-next');
+    const artifacts=state.caseSources.flatMap(source=>(source.artifacts||[]).filter(a=>W.deviceKey(a.deviceId,a.computer,state.drill.mode)===state.drill.key).map(a=>({...a,source})));state.artifactPage=Math.min(state.artifactPage,Math.max(0,Math.ceil(artifacts.length/PAGE_SIZE)-1));const artRoot=$('drill-artifacts');artRoot.replaceChildren();if(!artifacts.length)artRoot.appendChild(create('p','muted small','No matching registry keys.'));for(const item of artifacts.slice(state.artifactPage*PAGE_SIZE,(state.artifactPage+1)*PAGE_SIZE)){const card=create('article','issue-card');card.appendChild(create('strong','',item.keyPath));card.appendChild(create('p','muted small',item.source.id+' · '+item.source.filename+' · line '+item.line+' · SHA-256 '+item.source.sha256+' · host: '+(item.computer||'not provided')+' · no timestamp'));artRoot.appendChild(card);}pageInfo(artifacts.length,state.artifactPage,PAGE_SIZE,'artifact-page','artifact-prev','artifact-next');} 
+  $('close-device').addEventListener('click',()=>{$('device-detail').hidden=true;state.drill=null;});
+  $('drill-prev').addEventListener('click',()=>{if(state.drillPage>0){state.drillPage--;renderDrill();}});
+  $('drill-next').addEventListener('click',()=>{if(state.drill&&(state.drillPage+1)*PAGE_SIZE<W.deviceEvents(state.data.events,state.drill.key,state.drill.mode).length){state.drillPage++;renderDrill();}});
+  $('artifact-prev').addEventListener('click',()=>{if(state.artifactPage>0){state.artifactPage--;renderDrill();}});
+  $('artifact-next').addEventListener('click',()=>{state.artifactPage++;renderDrill();});
+  $('note-device').addEventListener('click',()=>{if(state.drill)selectNoteTarget({kind:'device',id:state.drill.key,mode:state.drill.mode,deviceId:state.drill.deviceId,host:state.drill.host,label:state.drill.deviceId+' · '+(state.drill.mode==='host'?(state.drill.host||'host not provided'):'all hosts')});});
+  function selectNoteTarget(target,silent){state.noteTarget=target;state.editingNote=null;$('note-text').value='';$('note-tags').value='';$('save-note').textContent='Save note';$('cancel-note-edit').hidden=true;setText('note-target','Target: '+target.kind+' · '+target.label);status('note-status','');if(state.data&&!silent){scrollToElement($('notes-panel'));$('note-text').focus({preventScroll:true});}}
+  $('note-case').addEventListener('click',()=>selectNoteTarget({kind:'case',label:'Case'}));
+  $('cancel-note-edit').addEventListener('click',()=>selectNoteTarget(state.noteTarget));
+  $('save-note').addEventListener('click',()=>{try{W.saveNote(state.notes,state.noteTarget,$('note-text').value,$('note-tags').value,state.editingNote);selectNoteTarget(state.noteTarget);renderNotes();status('note-status','Analyst note saved in this tab. Export it before closing.');}catch(error){status('note-status',error.message,true);}});
+  function renderNotes(){const root=$('note-list');root.replaceChildren();if(!state.notes.length){root.appendChild(create('p','muted small','No analyst notes yet.'));return;}state.notes.forEach(note=>{const latest=note.versions[note.versions.length-1],card=create('article','issue-card');card.appendChild(create('strong','',note.id+' · '+note.target.kind+' · '+note.target.label));card.appendChild(create('p','muted small','Last edited: '+latest.at+' · Tags: '+(latest.tags.join(', ')||'none')));card.appendChild(create('p','',latest.text));const edit=create('button','button quiet','Edit note');edit.type='button';edit.addEventListener('click',()=>{state.noteTarget=note.target;state.editingNote=note.id;setText('note-target','Editing '+note.id+' · '+note.target.label);$('note-text').value=latest.text;$('note-tags').value=latest.tags.join(', ');$('save-note').textContent='Save revision';$('cancel-note-edit').hidden=false;$('note-text').focus();});card.appendChild(edit);const history=create('details','note-history'),summary=create('summary','muted small','Edit history ('+note.versions.length+' versions)');history.appendChild(summary);note.versions.forEach((v,i)=>history.appendChild(create('pre','original-fields',(i+1)+' · '+v.at+' · tags: '+(v.tags.join(', ')||'none')+'\n'+v.text)));card.appendChild(history);root.appendChild(card);});}
+  $('export-notes').addEventListener('click',()=>download('usb-analyst-notes.json',W.notesExport(state.notes,state.caseSources),'application/json;charset=utf-8'));
+  window.addEventListener('beforeunload',event=>{if(state.notes.length){event.preventDefault();event.returnValue='';}});
   $('events-prev').addEventListener('click', () => { if (state.eventPage > 0) { state.eventPage--; renderEvents(); } });
   $('events-next').addEventListener('click', () => { if ((state.eventPage + 1) * PAGE_SIZE < state.filtered.length) { state.eventPage++; renderEvents(); } });
   $('devices-prev').addEventListener('click', () => { if (state.devicePage > 0) { state.devicePage--; renderDevices(); } });
-  $('devices-next').addEventListener('click', () => { if ((state.devicePage + 1) * DEVICE_PAGE_SIZE < state.stats.devices.length) { state.devicePage++; renderDevices(); } });
+  $('devices-next').addEventListener('click', () => { if ((state.devicePage + 1) * DEVICE_PAGE_SIZE < state.groups.length) { state.devicePage++; renderDevices(); } });
 
   function download(name, contents, mime) {
     try {
@@ -383,9 +403,11 @@
   $('export-issues').addEventListener('click', () => download('usb-activity-quality.csv', P.exportIssuesCSVChunks(state.data), 'text/csv;charset=utf-8'));
   $('export-report').addEventListener('click', () => {
     if (state.filterTimer) applyFilters();
-    download('usb-activity-triage-report.txt', P.reportText(state.data, state.filtered, $('search').value.trim(), $('event-type').value) + '\nCROSS-SOURCE REVIEW\n' + state.correlations.pairs.length + ' candidate associations' + (state.correlations.truncated ? ' (maximum reached; more may exist)' : '') + '. Export associations for details.\nRegistry keys: ' + state.caseSources.reduce((n,s) => n + (s.artifacts || []).length, 0) + '. Registry key exports have no connection timestamp.\n', 'text/plain;charset=utf-8');
+    download('usb-activity-triage-report.txt', P.reportText(state.data, state.filtered.slice().sort(W.compare), $('search').value.trim(), $('event-type').value) + '\nADDITIONAL FILTERS AND DISPLAY\n' + JSON.stringify({...state.appliedFilters,displayZone:state.zone}) + '\nAnalyst notes are separate; export the notes and edit history independently.\n\nCROSS-SOURCE REVIEW\n' + state.correlations.pairs.length + ' candidate associations' + (state.correlations.truncated ? ' (maximum reached; more may exist)' : '') + '. Export associations for details.\nRegistry keys: ' + state.caseSources.reduce((n,s) => n + (s.artifacts || []).length, 0) + '. Registry key exports have no connection timestamp.\n', 'text/plain;charset=utf-8');
   });
   $('clear-case').addEventListener('click', () => {
+    if(state.notes.length && !confirm('Clearing the case will discard its in-memory analyst notes. Export them first if needed. Continue?'))return;
+    state.notes=[];state.drill=null;$('device-detail').hidden=true;
     clearTimeout(state.filterTimer); state.data = null; state.files = []; state.caseSources = []; state.caseConfigs = {}; state.resolutions = {};
     state.filtered = []; state.stats = null; resetDraft(); $('file-input').value = ''; $('search').value = ''; $('event-type').value = 'all';
     $('results').hidden = true; setText('file-label', 'No files selected'); status('status', 'Case cleared from this tab. Choose evidence files or load the sample.');
