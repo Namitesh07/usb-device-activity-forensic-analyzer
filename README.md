@@ -8,7 +8,7 @@
 
 [![Browser-local analysis](assets/badge-local.svg)](docs/INPUTS.md#outputs-and-preservation)
 [![Prepared CSV input](assets/badge-csv.svg)](docs/INPUTS.md#prepared-csv-contract)
-[![Version 1.3.0](assets/badge-version.svg)](https://github.com/Namitesh07/usb-device-activity-forensic-analyzer/releases)
+[![Version 1.4.0](assets/badge-version.svg)](https://github.com/Namitesh07/usb-device-activity-forensic-analyzer/releases)
 
 [**Open the live app ↗**](https://namitesh07.github.io/usb-device-activity-forensic-analyzer/) · [Input guide](docs/INPUTS.md) · [Setup & tests](docs/SETUP.md) · [Roadmap](docs/ROADMAP.md) · [Releases](https://github.com/Namitesh07/usb-device-activity-forensic-analyzer/releases)
 
@@ -17,8 +17,8 @@
 ## At a glance
 
 - **Investigate:** Review prepared CSVs and selected Windows event, SetupAPI, and USBSTOR exports.
-- **Check context:** Review source fingerprints, data-quality issues, and possible cross-source associations.
-- **Export:** Download events, quality findings, associations, registry keys, or a text report. Evidence stays in your browser.
+- **Check context:** Review device timelines, source fingerprints, data quality, and possible cross-source associations.
+- **Export:** Filter timelines, make separate analyst notes, and export results. Evidence stays in your browser.
 
 ## Try it
 

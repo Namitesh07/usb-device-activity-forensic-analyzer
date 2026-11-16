@@ -79,12 +79,21 @@ The correlation panel compares records across different files only when the **fu
 
 Correlation is dataset-wide, independent of timeline filters. The first 500 associations and up to 100 IDs seen on different hosts are retained; the interface shows the first 25 and the CSV contains the retained set, their host names, timestamps, source records, hashes, and explanations. A limit warning appears when 500 associations are reached. The registry panel shows the first 50 keys and exports the full list. Records without both a host and full identifier are not correlated.
 
+## Analyst workflow
+
+The device summary groups by **host and full device ID** by default; an explicit option groups IDs across hosts. Select an ID to inspect all accepted matching case records, source references, original fields, and matching untimed USBSTOR registry keys. The drill-down covers the whole case even when the main timeline is filtered. Missing hosts are grouped separately. Matching IDs do not establish physical identity.
+
+The timeline can filter on event type, host, user, device ID, and UTC date/time. Start is inclusive and end is exclusive. Sorting uses full supported fractional precision. UTC or an IANA time zone can be selected for display; the filter boundaries and activity chart remain in UTC. IANA display depends on the browser time-zone database. The selected display zone does not change original timestamps or event exports.
+
+Use **Note record** in the timeline or device view, **Note this source** in source details, **Add device note** in a drill-down, or **Select case** in Notes and tags. Each note stores its target, text, comma-separated tags and an edit history; observations are analyst-authored and are not evidence. Notes and their history are held in memory only, limited to 500 notes. Export the separate JSON before refreshing, clearing, or analyzing a replacement case. A browser warning helps prevent accidental loss but cannot guarantee recovery. The JSON export is an archive for review; it does not reopen the case or restore notes. Source files, their hashes, and original values are not changed by notes.
+
 ## Outputs and preservation
 
 - **Events CSV:** all records matching the current filters, with UTC and original timestamps, event values, source ID, filename, SHA-256, logical record number, time setting, column mapping, original headers and values, duplicate-candidate references, and any analyst timestamp decision.
 - **Associations CSV:** the retained timed and registry identity matches, plus IDs observed on different hosts, with source hashes and explanations.
 - **Registry keys CSV:** all extracted USBSTOR instance keys with source, line, and any analyst-supplied host.
 - **Quality CSV:** all dataset-wide quality entries, including skipped and accepted records with warnings, source references, original headers and values, mappings, and any time candidates or decisions.
+- **Notes JSON:** analyst observations, tags, target references, source hashes and version history; separate from the evidence and not a reopenable case.
 - **Text report:** source summaries and mappings, current filters and device counts, quality counts and the first 20 quality entries, and interpretation limits.
 
 Logical record numbers count the header as record 1 and are not necessarily physical line numbers. CSV cells that could be interpreted as spreadsheet formulas receive a leading apostrophe, so exported representations may differ from source values. Browser-managed downloads cannot guarantee source-path protection: choose a different name and location and never overwrite original evidence.

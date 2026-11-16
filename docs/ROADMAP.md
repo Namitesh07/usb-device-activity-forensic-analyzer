@@ -2,7 +2,7 @@
 
 This is a proposed, dependency-ordered backlog, not a claim that the listed features already exist. Validate each release with representative fixtures and document its limits. Versions and scope can change as the project develops.
 
-The v1.3.0 browser release adds the first Phase 2 evidence adapters and conservative correlation locally on the user's device. Broader event mappings and raw registry-hive parsing remain future work.
+The v1.4.0 browser release adds device drill-down, timeline filters, and analyst notes to the Phase 2 evidence adapters locally on the user's device. Broader event mappings and raw registry-hive parsing remain future work.
 
 ## Phase 1 — More dependable input (completed in v1.2.0)
 
@@ -20,9 +20,9 @@ The v1.3.0 browser release adds the first Phase 2 evidence adapters and conserva
 
 ## Phase 3 — Analyst workflow
 
-9. **Device drill-down:** show full ID, all related records, hosts, source references, and a timeline; allow host-specific grouping to avoid merging unrelated devices.
-10. **Timeline and filters:** add date/time ranges, host/user/device filters, sorting, and views that make the selected time zone explicit.
-11. **Analyst notes and tags:** attach observations to a case, source, record, or device with edit history and clearly separate notes from evidence.
+9. **Device drill-down (v1.4.0):** explore accepted records and untimed registry keys by host and ID, or explicitly group across hosts; source references and fingerprints remain visible.
+10. **Timeline and filters (v1.4.0):** filter by UTC time range, host, user, device and type; sort by time and choose UTC or an IANA display zone.
+11. **Analyst notes and tags (v1.4.0):** attach in-memory observations to a case, source, record, or device; keep edit history and export it separately from evidence.
 12. **Known-device comparison:** import a local allowlist and show `matched`, `no match`, or `insufficient identifier`. A no-match result must not be labelled unauthorized without independent verification.
 13. **Explainable review rules:** add configurable patterns such as repeated records, new-to-dataset identifiers, and activity outside analyst-specified hours; show supporting evidence and benign explanations.
 14. **Expanded reporting:** create a printable HTML/PDF report with selected findings, filters, source hashes, timezone decisions, analyst notes, data-quality warnings, and limitations.
