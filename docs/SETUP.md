@@ -41,7 +41,7 @@ python3 -m venv .venv
 Run the browser analysis tests with Node.js:
 
 ```bash
-node --test tests/browser-analysis.test.cjs tests/phase1.test.cjs tests/phase2.test.cjs tests/phase3.test.cjs
+node --test tests/browser-analysis.test.cjs tests/phase1.test.cjs tests/phase2.test.cjs tests/phase3.test.cjs tests/review.test.cjs
 ```
 
 After installing the desktop requirements, run the Python tests:

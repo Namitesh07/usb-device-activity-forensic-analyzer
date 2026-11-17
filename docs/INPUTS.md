@@ -87,6 +87,20 @@ The timeline can filter on event type, host, user, device ID, and UTC date/time.
 
 Use **Note record** in the timeline or device view, **Note this source** in source details, **Add device note** in a drill-down, or **Select case** in Notes and tags. Each note stores its target, text, comma-separated tags and an edit history; observations are analyst-authored and are not evidence. Notes and their history are held in memory only, limited to 500 notes. Export the separate JSON before refreshing, clearing, or analyzing a replacement case. A browser warning helps prevent accidental loss but cannot guarantee recovery. The JSON export is an archive for review; it does not reopen the case or restore notes. Source files, their hashes, and original values are not changed by notes.
 
+### Known-device comparison and review leads
+
+Load a local UTF-8 known-device CSV after analysis. It must have a `device_id` header and may have a `computer` header:
+
+```csv
+device_id,computer
+USB-DEMO-001,LAB-PC-01
+USB-DEMO-002,
+```
+
+IDs and host names are matched exactly after trimming and ignoring case. A blank `computer` applies to all hosts. A list may contain up to 10,000 entries and be at most 1 MiB; blank device IDs and duplicate headers are rejected. The list is held in the tab, and its SHA-256 fingerprint is recorded in the report. Counts describe filtered records, including records with insufficient identifiers; device groups across hosts can show `mixed`. A match or no-match reflects only the supplied list, not proof of authorization or physical identity.
+
+Run the review rules against the current filtered timeline. They can identify duplicate candidates, the first occurrence of an ID within that view for a host, and records outside analyst-specified hours in an IANA time zone. Overnight hours are supported; start is inclusive and end exclusive. First in view is not necessarily the device’s first use. Each lead includes evidence and possible benign explanations. At most 500 leads are generated, with a warning when the limit is reached. Select leads for the report; changing filters or rule settings clears the previous results and selection, so rerun the rules.
+
 ## Outputs and preservation
 
 - **Events CSV:** all records matching the current filters, with UTC and original timestamps, event values, source ID, filename, SHA-256, logical record number, time setting, column mapping, original headers and values, duplicate-candidate references, and any analyst timestamp decision.
@@ -95,6 +109,7 @@ Use **Note record** in the timeline or device view, **Note this source** in sour
 - **Quality CSV:** all dataset-wide quality entries, including skipped and accepted records with warnings, source references, original headers and values, mappings, and any time candidates or decisions.
 - **Notes JSON:** analyst observations, tags, target references, source hashes and version history; separate from the evidence and not a reopenable case.
 - **Text report:** source summaries and mappings, current filters and device counts, quality counts and the first 20 quality entries, and interpretation limits.
+- **Printable HTML report:** selected review leads, filter and rule settings, source fingerprints and mappings, known-device comparison counts, analyst timestamp decisions, notes and history, limitations, and the first 1,000 quality entries. Export the quality CSV for all entries. Open the HTML locally and use the browser’s Print or Save as PDF command.
 
 Logical record numbers count the header as record 1 and are not necessarily physical line numbers. CSV cells that could be interpreted as spreadsheet formulas receive a leading apostrophe, so exported representations may differ from source values. Browser-managed downloads cannot guarantee source-path protection: choose a different name and location and never overwrite original evidence.
 
@@ -102,4 +117,4 @@ The current case remains in memory until the tab is refreshed, closed, or cleare
 
 ## Original desktop app
 
-The included v1.0 desktop app remains a separate, single-file workflow. It requires the original `timestamp`, `event_type`, and `device_id` headers and uses a fixed offset for offset-free timestamps. The browser-only Phase 1 and Phase 2 improvements do not change the desktop app.
+The included v1.0 desktop app remains a separate, single-file workflow. It requires the original `timestamp`, `event_type`, and `device_id` headers and uses a fixed offset for offset-free timestamps. The browser-only Phase 1, Phase 2, and Phase 3 improvements do not change the desktop app.

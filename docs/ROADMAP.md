@@ -2,7 +2,7 @@
 
 This is a proposed, dependency-ordered backlog, not a claim that the listed features already exist. Validate each release with representative fixtures and document its limits. Versions and scope can change as the project develops.
 
-The v1.4.0 browser release adds device drill-down, timeline filters, and analyst notes to the Phase 2 evidence adapters locally on the user's device. Broader event mappings and raw registry-hive parsing remain future work.
+The v1.5.0 browser release completes the Phase 3 analyst workflow with local known-device comparison, explainable review leads, and printable reports. Broader event mappings and raw registry-hive parsing remain future work.
 
 ## Phase 1 — More dependable input (completed in v1.2.0)
 
@@ -18,14 +18,14 @@ The v1.4.0 browser release adds device drill-down, timeline filters, and analyst
 7. **Offline Windows artifacts:** added selected SetupAPI device-install sections and text `.reg` exports of USBSTOR instance keys. Raw registry hives and other device artifact families remain unsupported.
 8. **Source correlation:** reports same-host/full-ID records within five minutes, untimed registry identity links, and IDs seen on different hosts, with explanations and capped output. More advanced correlation needs further validation.
 
-## Phase 3 — Analyst workflow
+## Phase 3 — Analyst workflow (completed in v1.5.0)
 
 9. **Device drill-down (v1.4.0):** explore accepted records and untimed registry keys by host and ID, or explicitly group across hosts; source references and fingerprints remain visible.
 10. **Timeline and filters (v1.4.0):** filter by UTC time range, host, user, device and type; sort by time and choose UTC or an IANA display zone.
 11. **Analyst notes and tags (v1.4.0):** attach in-memory observations to a case, source, record, or device; keep edit history and export it separately from evidence.
-12. **Known-device comparison:** import a local allowlist and show `matched`, `no match`, or `insufficient identifier`. A no-match result must not be labelled unauthorized without independent verification.
-13. **Explainable review rules:** add configurable patterns such as repeated records, new-to-dataset identifiers, and activity outside analyst-specified hours; show supporting evidence and benign explanations.
-14. **Expanded reporting:** create a printable HTML/PDF report with selected findings, filters, source hashes, timezone decisions, analyst notes, data-quality warnings, and limitations.
+12. **Known-device comparison (v1.5.0):** compare a local CSV by device ID and optional host, showing `matched`, `no match`, or `insufficient identifier`. A no-match result is not proof of unauthorized use.
+13. **Explainable review rules (v1.5.0):** review duplicate candidates, first identifiers in the current view, and records outside analyst-specified hours, with supporting records and benign explanations.
+14. **Expanded reporting (v1.5.0):** export printable HTML with selected findings, filters, source hashes, timezone decisions, analyst notes, quality warnings, and limits; use the browser to print or save as PDF.
 
 ## Phase 4 — Cases and reproducibility
 
@@ -48,4 +48,4 @@ The v1.4.0 browser release adds device drill-down, timeline filters, and analyst
 25. **Removable-media enrichment:** optional offline vendor/product lookup and device metadata, with versioned reference data and clear limits on identity confidence.
 26. **Advanced correlation:** link evidence from multiple hosts or a broader investigation only when identity and clock assumptions can be shown and tested.
 
-**Recommended next phase:** improve analyst workflow while expanding the validated fixture corpus and Windows source coverage.
+**Recommended next phase:** consider optional local cases and reproducible exports while expanding the validated fixture corpus and Windows source coverage.
