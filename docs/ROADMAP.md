@@ -2,7 +2,7 @@
 
 This is a proposed, dependency-ordered backlog, not a claim that the listed features already exist. Validate each release with representative fixtures and document its limits. Versions and scope can change as the project develops.
 
-The v1.5.0 browser release completes the Phase 3 analyst workflow with local known-device comparison, explainable review leads, and printable reports. Broader event mappings and raw registry-hive parsing remain future work.
+The v1.6.0 browser release adds user-managed cases, source verification, analyst-recorded provenance, and machine-readable manifests. Broader event mappings and raw registry-hive parsing remain future work.
 
 ## Phase 1 — More dependable input (completed in v1.2.0)
 
@@ -27,12 +27,12 @@ The v1.5.0 browser release completes the Phase 3 analyst workflow with local kno
 13. **Explainable review rules (v1.5.0):** review duplicate candidates, first identifiers in the current view, and records outside analyst-specified hours, with supporting records and benign explanations.
 14. **Expanded reporting (v1.5.0):** export printable HTML with selected findings, filters, source hashes, timezone decisions, analyst notes, quality warnings, and limits; use the browser to print or save as PDF.
 
-## Phase 4 — Cases and reproducibility
+## Phase 4 — Cases and reproducibility (browser implementation in v1.6.0)
 
-15. **Optional local cases:** save and reopen cases explicitly, for example through a versioned user-managed case file in the browser; the desktop app could optionally use SQLite. Avoid silently persisting sensitive logs.
-16. **Evidence provenance and custody:** record collection details supplied by the analyst, source fingerprints, import decisions, and actions in an append-only audit view; explain what this can and cannot prove.
-17. **Reproducible exports:** provide a versioned case manifest and machine-readable JSON with filters, rule settings, hashes, and original-record references.
-18. **Safer handling of case files:** document browser-managed downloads and original-file preservation, add desktop path checks where applicable, and provide retention/deletion guidance; evaluate encryption only with an established design and honest key-management limits.
+15. **Optional local cases:** save a versioned JSON case and reopen it by selecting the original sources, which must match the recorded SHA-256 hashes. The browser does not silently persist cases; the original desktop app remains separate.
+16. **Evidence provenance and custody:** record analyst-supplied collection details, source fingerprints, import decisions, and selected actions in a chronological view. Entries append in the app, but editable files and local clocks do not prove custody or resist tampering.
+17. **Reproducible exports:** export a versioned JSON manifest with filters, rule settings, source hashes, timestamp decisions, baseline snapshot, notes, audit entries, and original-record references.
+18. **Safer handling of case files:** document browser-managed downloads, original-file preservation, storage and deletion; the desktop exporter already checks the source path and same-file aliases. Case files are not encrypted.
 
 ## Phase 5 — Reliability and presentation
 
@@ -48,4 +48,4 @@ The v1.5.0 browser release completes the Phase 3 analyst workflow with local kno
 25. **Removable-media enrichment:** optional offline vendor/product lookup and device metadata, with versioned reference data and clear limits on identity confidence.
 26. **Advanced correlation:** link evidence from multiple hosts or a broader investigation only when identity and clock assumptions can be shown and tested.
 
-**Recommended next phase:** consider optional local cases and reproducible exports while expanding the validated fixture corpus and Windows source coverage.
+**Recommended next phase:** improve the fixture corpus, automated checks, accessibility, and performance.
