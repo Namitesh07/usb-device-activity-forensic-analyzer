@@ -8,7 +8,7 @@
 
 [![Browser-local analysis](assets/badge-local.svg)](docs/INPUTS.md#outputs-and-preservation)
 [![Prepared CSV input](assets/badge-csv.svg)](docs/INPUTS.md#prepared-csv-contract)
-[![Version 1.5.0](assets/badge-version.svg)](https://github.com/Namitesh07/usb-device-activity-forensic-analyzer/releases)
+[![Version 1.6.0](assets/badge-version.svg)](https://github.com/Namitesh07/usb-device-activity-forensic-analyzer/releases)
 
 [**Open the live app ↗**](https://namitesh07.github.io/usb-device-activity-forensic-analyzer/) · [Input guide](docs/INPUTS.md) · [Setup & tests](docs/SETUP.md) · [Roadmap](docs/ROADMAP.md) · [Releases](https://github.com/Namitesh07/usb-device-activity-forensic-analyzer/releases)
 
@@ -18,7 +18,7 @@
 
 - **Investigate:** Review prepared CSVs and selected Windows event, SetupAPI, and USBSTOR exports.
 - **Check context:** Review timelines, source fingerprints, known-device matches, and explainable review leads.
-- **Export:** Filter timelines, add analyst notes, and create a printable report. Evidence stays in your browser.
+- **Export:** Save and reopen local cases, keep analyst notes, and export reports or a case manifest. Evidence stays in your browser.
 
 ## Try it
 
