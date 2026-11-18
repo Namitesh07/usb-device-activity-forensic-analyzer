@@ -85,7 +85,7 @@ The device summary groups by **host and full device ID** by default; an explicit
 
 The timeline can filter on event type, host, user, device ID, and UTC date/time. Start is inclusive and end is exclusive. Sorting uses full supported fractional precision. UTC or an IANA time zone can be selected for display; the filter boundaries and activity chart remain in UTC. IANA display depends on the browser time-zone database. The selected display zone does not change original timestamps or event exports.
 
-Use **Note record** in the timeline or device view, **Note this source** in source details, **Add device note** in a drill-down, or **Select case** in Notes and tags. Each note stores its target, text, comma-separated tags and an edit history; observations are analyst-authored and are not evidence. Notes and their history are held in memory only, limited to 500 notes. Export the separate JSON before refreshing, clearing, or analyzing a replacement case. A browser warning helps prevent accidental loss but cannot guarantee recovery. The JSON export is an archive for review; it does not reopen the case or restore notes. Source files, their hashes, and original values are not changed by notes.
+Use **Note record** in the timeline or device view, **Note this source** in source details, **Add device note** in a drill-down, or **Select case** in Notes and tags. Each note stores its target, text, comma-separated tags and an edit history; observations are analyst-authored and are not evidence. Notes and their history are held in memory only, limited to 500 notes. Save a case before refreshing, clearing, or analyzing a replacement case to restore the notes later, or export the separate notes JSON for review. A browser warning helps prevent accidental loss but cannot guarantee recovery. The separate notes export does not reopen a case. Source files, their hashes, and original values are not changed by notes.
 
 ### Known-device comparison and review leads
 
@@ -101,6 +101,22 @@ IDs and host names are matched exactly after trimming and ignoring case. A blank
 
 Run the review rules against the current filtered timeline. They can identify duplicate candidates, the first occurrence of an ID within that view for a host, and records outside analyst-specified hours in an IANA time zone. Overnight hours are supported; start is inclusive and end exclusive. First in view is not necessarily the device’s first use. Each lead includes evidence and possible benign explanations. At most 500 leads are generated, with a warning when the limit is reached. Select leads for the report; changing filters or rule settings clears the previous results and selection, so rerun the rules.
 
+## Saved cases and provenance
+
+After analysis, **Save case JSON** creates a versioned, user-managed file with source filenames, SHA-256 fingerprints and import settings, timestamp decisions, filters, rule settings and selected leads, the known-device list snapshot, notes, and recorded actions. It does not embed the original source evidence. Nothing is saved automatically. To reopen, select the case JSON and original evidence files under **Reopen an investigation**. Each source must match its recorded byte length and SHA-256; order and current filename do not matter. The app reparses matching evidence with the saved settings. Keep the original files: a missing or changed source prevents reopening. The recorded case version identifies the file format, not a frozen parser or browser time-zone database; verify important results after app or system updates.
+
+The case includes a copy of the known-device list entries, not its original CSV. On reopening the snapshot is labelled unverified: the recorded list hash cannot verify an edited snapshot. Reload the original list if independent verification is required.
+
+Use **Add collection detail** to record analyst-supplied information for a source, such as the collector, time, location, and method if known. The chronological action view includes source import settings, analyst timestamp decisions, collection statements, known-list changes, filters, review runs, finding selections, notes and case/manifest requests. It displays the latest 100 of up to 10,000 entries; all entries are included in the case and manifest. This is not a complete operating-system activity log. The app only appends entries in its interface, but the files can be edited, entries can be omitted when the limit is reached, and timestamps use the local device clock. It is not tamper-evident and does not authenticate the analyst or establish chain of custody.
+
+**Export case manifest** writes versioned machine-readable JSON with settings, source fingerprints, source-record references for filtered records and selected findings, analyst notes, and the recorded action history. It is a review and reproducibility aid; it is not a replacement for original evidence. The manifest is not a reopenable case.
+
+### Storage, retention, and deletion
+
+Case files, manifests, and other exports may contain sensitive analyst observations, device identifiers, and collection details. They are **not encrypted or authenticated** by the app. Save them in a suitably protected location, restrict access according to your own requirements, and use an established encryption method separately if needed. Keep case files and exports separate from original evidence and choose distinct filenames. Browser-managed downloads cannot guarantee that a selected destination will not overwrite a source; review your browser's download settings and destination carefully. The desktop exporter checks for the source path and same-file aliases, but that check cannot eliminate every filesystem race.
+
+Set an appropriate retention period for your investigation. Clear the tab and delete exported copies from the locations where you saved them, including copies, backups, and the browser download history as appropriate. The app cannot delete copies for you or guarantee secure erasure. The original source may need to be retained under a separate evidence policy.
+
 ## Outputs and preservation
 
 - **Events CSV:** all records matching the current filters, with UTC and original timestamps, event values, source ID, filename, SHA-256, logical record number, time setting, column mapping, original headers and values, duplicate-candidate references, and any analyst timestamp decision.
@@ -108,13 +124,15 @@ Run the review rules against the current filtered timeline. They can identify du
 - **Registry keys CSV:** all extracted USBSTOR instance keys with source, line, and any analyst-supplied host.
 - **Quality CSV:** all dataset-wide quality entries, including skipped and accepted records with warnings, source references, original headers and values, mappings, and any time candidates or decisions.
 - **Notes JSON:** analyst observations, tags, target references, source hashes and version history; separate from the evidence and not a reopenable case.
+- **Saved case JSON:** settings, notes, list snapshot and recorded actions for reopening with the separately retained, hash-matched original files.
+- **Case manifest JSON:** versioned settings, source references, filtered record references, notes, and recorded actions for review; not a reopenable case.
 - **Text report:** source summaries and mappings, current filters and device counts, quality counts and the first 20 quality entries, and interpretation limits.
 - **Printable HTML report:** selected review leads, filter and rule settings, source fingerprints and mappings, known-device comparison counts, analyst timestamp decisions, notes and history, limitations, and the first 1,000 quality entries. Export the quality CSV for all entries. Open the HTML locally and use the browser’s Print or Save as PDF command.
 
 Logical record numbers count the header as record 1 and are not necessarily physical line numbers. CSV cells that could be interpreted as spreadsheet formulas receive a leading apostrophe, so exported representations may differ from source values. Browser-managed downloads cannot guarantee source-path protection: choose a different name and location and never overwrite original evidence.
 
-The current case remains in memory until the tab is refreshed, closed, or cleared. Exports do not reopen a case. Retain the original files and document collection separately; a SHA-256 fingerprint supports byte comparison but does not establish authenticity or chain of custody.
+The current case remains in memory until the tab is refreshed, closed, or cleared. A saved case can be reopened with hash-matched original sources; other exports cannot reopen it. Retain the original files and document collection separately; a SHA-256 fingerprint supports byte comparison but does not establish authenticity or chain of custody.
 
 ## Original desktop app
 
-The included v1.0 desktop app remains a separate, single-file workflow. It requires the original `timestamp`, `event_type`, and `device_id` headers and uses a fixed offset for offset-free timestamps. The browser-only Phase 1, Phase 2, and Phase 3 improvements do not change the desktop app.
+The included v1.0 desktop app remains a separate, single-file workflow. It requires the original `timestamp`, `event_type`, and `device_id` headers and uses a fixed offset for offset-free timestamps. The browser-only Phase 1 through Phase 4 improvements do not change the desktop app.
