@@ -8,3 +8,5 @@ Thumbs.db
 # Keep case material and generated exports out of version control.
 cases/
 exports/
+
+node_modules/
