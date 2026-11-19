@@ -71,9 +71,9 @@
               <strong>Drop your evidence files here</strong><span>or <u>choose files</u> from your device</span><small id="file-label">No files selected</small>
             </label>
             <p class="field-note" id="file-help">Prepared CSV, Windows Event CSV/XML/EVTX, SetupAPI logs, or USBSTOR .reg exports · up to 20 files, 20 MiB, and 100,000 records combined.</p>
-            <div class="intake-actions"><button class="button primary" id="prepare" type="button" disabled>Preview files <span aria-hidden="true">→</span></button><button class="button secondary" id="demo" type="button">Try fictional sample</button><button class="button secondary" id="demo-multi" type="button" title="Fictional sources with duplicate candidates and daylight-saving times">Try two-file demo</button><button class="button secondary" id="demo-phase2" type="button">Try Windows evidence demo</button></div>
+            <div class="intake-actions"><button class="button primary" id="prepare" type="button" disabled>Preview files <span aria-hidden="true">→</span></button><button class="button quiet" id="cancel-import" type="button" hidden>Cancel import</button><button class="button secondary" id="demo" type="button">Try fictional sample</button><button class="button secondary" id="demo-multi" type="button" title="Fictional sources with duplicate candidates and daylight-saving times">Try two-file demo</button><button class="button secondary" id="demo-phase2" type="button">Try Windows evidence demo</button></div>
             <p class="field-note">The Windows demo uses fictional event, installation, and registry records. The two-file demo illustrates duplicate candidates and time-zone review.</p>
-            <p class="status" id="status" role="status" aria-live="polite">Choose evidence files or load the sample to begin.</p>
+            <div id="import-progress-wrap" class="import-progress" hidden><label for="import-progress">Import progress</label><progress id="import-progress" max="1" value="0"></progress><span id="import-progress-text"></span></div><p class="status" id="status" role="status" aria-live="polite">Choose evidence files or load the sample to begin.</p>
           </div>
           <aside class="panel settings-panel">
             <div class="panel-label"><span>BEFORE YOU BEGIN</span><span>02</span></div>
@@ -83,6 +83,7 @@
             <div class="privacy-callout"><span aria-hidden="true">✳</span><p><strong>Evidence stays on your device.</strong> Your evidence is processed in this tab and is not uploaded or saved automatically.</p></div>
           </aside>
         </div>
+        <details class="panel quickstart"><summary>New here? Try the fictional Windows walkthrough</summary><ol><li>Select <strong>Try Windows evidence demo</strong>.</li><li>Review the source previews, mappings, and time settings; confirm the review and analyze.</li><li>Inspect the timeline, quality entries, and possible associations. Add notes or export a report if useful.</li></ol><p>The demo is fictional. Recognition and installation entries do not by themselves prove a physical connection.</p><a href="https://github.com/Namitesh07/usb-device-activity-forensic-analyzer/blob/main/docs/WALKTHROUGH.md">Full walkthrough and troubleshooting ↗</a></details>
         <section class="panel phase3-panel" aria-labelledby="reopen-title">
           <div class="panel-heading"><div><p class="eyebrow">OPTIONAL LOCAL CASE</p><h3 id="reopen-title">Reopen an investigation.</h3></div><span class="subtle-chip">USER-MANAGED</span></div>
           <p class="muted small">Choose a previously saved case and its original evidence files. Their SHA-256 hashes must match before the case is reopened. Case files can contain sensitive notes and are not encrypted.</p>
