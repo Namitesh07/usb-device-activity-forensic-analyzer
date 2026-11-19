@@ -22,7 +22,7 @@ class ParserReferenceTests(unittest.TestCase):
             expected = list(csv.reader(io.StringIO(text, newline=""), strict=True))
             result = subprocess.run(
                 ["node", "-e", "const A=require('./analysis.js');let s='';process.stdin.setEncoding('utf8');process.stdin.on('data',x=>s+=x);process.stdin.on('end',()=>console.log(JSON.stringify(A.parseCSV(s))));"],
-                cwd=ROOT, input=text, text=True, capture_output=True, check=True,
+                cwd=ROOT, input=text.encode("utf-8"), capture_output=True, check=True,
             )
             self.assertEqual(json.loads(result.stdout), expected)
 
