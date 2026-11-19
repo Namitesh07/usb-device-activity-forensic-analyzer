@@ -3,7 +3,7 @@
   const $ = id => document.getElementById(id);
   const A = window.USBAnalysis, P = window.USBPhase1, E = window.USBPhase2, W = window.USBPhase3, R = window.USBReview, C = window.USBCase;
   const state = { files: [], draftSources: [], draftConfigs: {}, caseSources: [], caseConfigs: {}, resolutions: {},
-    audit: [], data: null, baseline: null, baselineIndex: null, baselineStates: new Map(), baselineCounts: {}, review: null, selectedFindings: new Set(), reviewPage: 0, correlations: null, filtered: [], stats: null, groups: [], zone: 'UTC', appliedFilters: {}, drill: null, drillPage: 0, artifactPage: 0, notes: [], noteTarget: {kind:'case',label:'Case'}, editingNote: null, eventPage: 0, devicePage: 0, issuePage: 0, busy: false, filterTimer: null };
+    audit: [], data: null, baseline: null, baselineIndex: null, baselineStates: new Map(), baselineCounts: {}, review: null, selectedFindings: new Set(), reviewPage: 0, correlations: null, filtered: [], stats: null, groups: [], zone: 'UTC', appliedFilters: {}, drill: null, drillPage: 0, artifactPage: 0, notes: [], noteTarget: {kind:'case',label:'Case'}, editingNote: null, eventPage: 0, devicePage: 0, issuePage: 0, busy: false, importJob: null, filterTimer: null };
   const PAGE_SIZE = 20, DEVICE_PAGE_SIZE = 10, ISSUE_PAGE_SIZE = 10;
   const FIELD_LABELS = { timestamp: 'Timestamp', event_type: 'Prepared event label', device_id: 'Device ID', computer: 'Computer', username: 'User' };
   const number = value => new Intl.NumberFormat().format(value);
@@ -54,18 +54,51 @@
   for (const name of ['dragleave', 'drop']) drop.addEventListener(name, event => { event.preventDefault(); drop.classList.remove('dragging'); });
   drop.addEventListener('drop', event => chooseFiles(event.dataTransfer.files));
 
+  function importCancelled() { return new Error('Import cancelled.'); }
+  async function prepareInBackground(bytes,name,id,job) {
+    if(job.cancelled)throw importCancelled();
+    // XML needs DOMParser, which is unavailable in workers; retain the existing parser.
+    if(/\.xml$/i.test(name)||typeof Worker==='undefined') {
+      status('status','Reading '+name+' on the main thread. Cancellation may wait until this file finishes.');
+      await new Promise(resolve=>setTimeout(resolve,0));
+      if(job.cancelled)throw importCancelled();
+      return E.prepareInput(bytes,name,id);
+    }
+    let worker;
+    try { worker=new Worker('import-worker.js'); }
+    catch (_) { status('status','Background import unavailable; reading '+name+' on the main thread.'); return E.prepareInput(bytes,name,id); }
+    job.worker=worker;
+    try {
+      return await new Promise((resolve,reject)=>{
+        job.reject=reject;
+        worker.onmessage=event=>{job.reject=null;event.data.ok?resolve(event.data.source):reject(new Error(event.data.error));};
+        worker.onerror=event=>{event.preventDefault();job.reject=null;reject(new Error('Background import could not start. Use HTTPS or localhost and try again.'));};
+        worker.postMessage({bytes,name,id});
+      });
+    } finally { worker.terminate();job.worker=null;job.reject=null; }
+  }
+  $('cancel-import').addEventListener('click',()=>{
+    const job=state.importJob;if(!job)return;job.cancelled=true;
+    if(job.worker)job.worker.terminate();if(job.reject)job.reject(importCancelled());
+    status('status','Cancelling import…');
+  });
   async function prepareFiles(sample) {
     if (state.busy || (!sample && !state.files.length)) return;
-    setBusy(true); status('status', sample ? 'Preparing fictional sample data…' : 'Reading and fingerprinting the selected evidence locally…');
+    const job={cancelled:false,worker:null,reject:null};state.importJob=job;
+    setBusy(true);$('cancel-import').hidden=false;$('import-progress-wrap').hidden=false;
+    status('status', sample ? 'Preparing fictional sample data…' : 'Reading and fingerprinting the selected evidence locally…');
     try {
       await new Promise(resolve => requestAnimationFrame(resolve));
       const inputs = sample === 'phase2' ? window.USB_PHASE2_SAMPLE_FILES.map(file => ({ name: file.name, bytes: new TextEncoder().encode(file.content) })) : sample === 'multi' ? window.USB_PHASE1_SAMPLE_FILES.map(file => ({ name: file.name, bytes: new TextEncoder().encode(file.content) })) :
         sample ? [{ name: 'fictional_usb_activity.csv (sample)', bytes: new TextEncoder().encode(window.USB_SAMPLE_CSV) }] : state.files;
-      const sources = [];
+      const sources = []; $('import-progress').max=inputs.length;$('import-progress').value=0;setText('import-progress-text','0 / '+inputs.length+' files');
       for (let i = 0; i < inputs.length; i++) {
-        const item = inputs[i], bytes = await P.readInputBytes(item);
-        sources.push(await E.prepareInput(bytes, item.name, 'S' + String(i + 1).padStart(2, '0')));
-        P.validateCollection(sources);
+        if(job.cancelled)throw importCancelled();
+        const item = inputs[i];status('status','Reading '+item.name+' ('+(i+1)+' of '+inputs.length+') locally…');
+        const bytes = await P.readInputBytes(item);
+        const source=await prepareInBackground(bytes,item.name,'S'+String(i+1).padStart(2,'0'),job);
+        if(job.cancelled)throw importCancelled();sources.push(source);P.validateCollection(sources);
+        $('import-progress').value=i+1;setText('import-progress-text',(i+1)+' / '+inputs.length+' files');
       }
       const configs = {};
       sources.forEach(source => { configs[source.id] = { mapping: { ...source.suggestedMapping }, host: sample === 'phase2' && source.format !== 'Windows Event CSV' ? 'LAB-PC-01' : '', channel: '', zone: sample === 'multi' ? { mode: 'iana', value: 'America/New_York' } : { mode: 'fixed', value: '+00:00' } }; });
@@ -78,8 +111,8 @@
       status('preview-status', state.data ? 'The previous results remain available until the reviewed sources are analyzed.' : 'Review each source, then confirm the event meanings.');
       $('preview-title').focus({ preventScroll: true }); scrollToElement($('preview'));
     } catch (error) {
-      status('status', (error && error.message ? error.message : 'Could not read these files.') + (state.data ? ' The previous results are still available below.' : ''), true);
-    } finally { setBusy(false); }
+      status('status', (error && error.message ? error.message : 'Could not read these files.') + (state.data ? ' The previous results are still available below.' : ''), !job.cancelled);
+    } finally { state.importJob=null;$('cancel-import').hidden=true;$('import-progress-wrap').hidden=true;setBusy(false); }
   }
   $('prepare').addEventListener('click', () => prepareFiles(false));
   $('demo').addEventListener('click', () => prepareFiles(true));
