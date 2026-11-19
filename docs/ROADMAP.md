@@ -2,7 +2,7 @@
 
 This is a proposed, dependency-ordered backlog, not a claim that the listed features already exist. Validate each release with representative fixtures and document its limits. Versions and scope can change as the project develops.
 
-The v1.6.0 browser release adds user-managed cases, source verification, analyst-recorded provenance, and machine-readable manifests. Broader event mappings and raw registry-hive parsing remain future work.
+The v1.7.0 browser release adds background imports, cancellation, test fixtures, automated checks, and a fictional walkthrough. Broader event mappings and raw registry-hive parsing remain future work.
 
 ## Phase 1 — More dependable input (completed in v1.2.0)
 
@@ -36,10 +36,10 @@ The v1.6.0 browser release adds user-managed cases, source verification, analyst
 
 ## Phase 5 — Reliability and presentation
 
-19. **Realistic test corpus:** add licensed or synthetic Windows fixtures, malformed files, mixed timezones, large datasets, regression tests, and parser cross-checks.
-20. **Automated checks:** run browser-engine and JavaScript tests, plus desktop tests across supported operating systems and Python versions; scan dependencies and document update policy.
-21. **Performance and accessibility:** background imports, progress/cancel controls, virtualized tables, keyboard navigation, improved contrast, and screen-reader checks.
-22. **Packaging and onboarding:** improve the browser demo and offline download, add sample walkthroughs, screenshots, and troubleshooting; provide signed desktop releases where feasible.
+19. **Test corpus (expanded in v1.7.0):** synthetic Windows and malformed inputs, daylight-saving decisions, large CSVs, regression tests, and CSV cross-checks against Python’s parser. More independently validated EVTX fixtures and parser cross-checks remain needed.
+20. **Automated checks (added in v1.7.0):** GitHub Actions runs JavaScript tests, Chromium/Firefox workflows, desktop tests across Linux, Windows and macOS, dependency scans, and bundled parser fingerprint checks.
+21. **Performance and accessibility (improved in v1.7.0):** background parsing for supported files, file-level progress and cancellation, visible keyboard focus and mobile navigation. Existing tables are paginated; virtual scrolling, broader contrast and screen-reader audits remain future work.
+22. **Packaging and onboarding (improved in v1.7.0):** add an in-app fictional walkthrough, a screenshot, a local source download and troubleshooting. Signed desktop installers remain future work.
 
 ## Later, if justified by evidence and testing
 
@@ -48,4 +48,4 @@ The v1.6.0 browser release adds user-managed cases, source verification, analyst
 25. **Removable-media enrichment:** optional offline vendor/product lookup and device metadata, with versioned reference data and clear limits on identity confidence.
 26. **Advanced correlation:** link evidence from multiple hosts or a broader investigation only when identity and clock assumptions can be shown and tested.
 
-**Recommended next phase:** improve the fixture corpus, automated checks, accessibility, and performance.
+**Recommended next:** expand independent EVTX validation and accessibility testing before considering further evidence adapters.
