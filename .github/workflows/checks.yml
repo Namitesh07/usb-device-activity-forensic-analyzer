@@ -1,0 +1,71 @@
+name: Reliability checks
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  javascript:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        node: [20, 22]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+      - run: npm test
+  browser:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        browser: [chromium, firefox]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm install --ignore-scripts --no-fund
+      - run: npx playwright install --with-deps ${{ matrix.browser }}
+      - run: npm run test:browser
+        env:
+          BROWSER: ${{ matrix.browser }}
+  desktop:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        python: ['3.10', '3.12']
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: python -m pip install -r requirements.txt
+      - run: python -m unittest discover -s tests -v
+  dependencies:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: python -m pip install pip-audit
+      - run: pip-audit -r requirements.txt
+      - run: npm install --ignore-scripts --no-fund
+      - run: npm audit --audit-level=high
+      - name: Check bundled parser fingerprints
+        run: |
+          echo '5f65580bfdca01d3269b524c3afad8bd5537e5161bef9dd5c8ec5714cc9621bc  wasm/evtx_wasm_bg.wasm' | sha256sum -c
+          echo '5666d4a6d7cdadde49ed807e64b9d71c5287c83be2f4a1ab5fd3c9814ab9f762  wasm/evtx_wasm.js' | sha256sum -c
