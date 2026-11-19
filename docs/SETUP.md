@@ -8,7 +8,7 @@ See the [input and evidence guide](INPUTS.md) for the CSV format, size limits, t
 
 ### Run a local copy
 
-Download or clone the repository, then open `index.html` in a current browser. If the browser cannot calculate SHA-256 on local files, run a local server from the project folder:
+Download or clone the repository, then open `index.html` in a current browser. If hashing, background imports, or EVTX loading do not work from a file URL, run a local server from the project folder:
 
 ```bash
 python -m http.server 8000 --bind 127.0.0.1
@@ -41,7 +41,7 @@ python3 -m venv .venv
 Run the browser analysis tests with Node.js:
 
 ```bash
-node --test tests/browser-analysis.test.cjs tests/phase1.test.cjs tests/phase2.test.cjs tests/phase3.test.cjs tests/review.test.cjs tests/phase4.test.cjs
+npm test
 ```
 
 After installing the desktop requirements, run the Python tests:
@@ -49,3 +49,15 @@ After installing the desktop requirements, run the Python tests:
 ```bash
 python -m unittest discover -s tests -v
 ```
+
+For browser integration checks, install the pinned development dependency and browser engines:
+
+```bash
+npm install --ignore-scripts
+npx playwright install chromium firefox
+npm run test:browser
+```
+
+Set `BROWSER=firefox` (or the equivalent environment variable on your shell) to test Firefox. GitHub Actions runs the JavaScript suite, browser workflows, desktop tests on supported OS/Python combinations, dependency audits, and bundled parser fingerprint checks. Review failed checks before merging changes; update the pinned Playwright version and desktop dependency ranges deliberately, rerun checks, and review release notes and security advisories. The bundled EVTX parser does not have a reproducible build from its upstream distribution; review [its notice](../wasm/NOTICE.md) before replacing it.
+
+For a local copy and demo walkthrough, see [walkthrough and troubleshooting](WALKTHROUGH.md). The browser app still requires no npm packages at runtime.
