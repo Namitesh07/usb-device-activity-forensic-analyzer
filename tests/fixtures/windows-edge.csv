@@ -1,0 +1,4 @@
+Date and Time,Source,Event ID,Channel,Computer,DeviceId,EventRecordID
+2026-11-01T01:30:00,Microsoft-Windows-Security-Auditing,6416,Security,LAB-A,USB\VID_1234&PID_0001\FICTIONAL,101
+2026-11-01T01:30:00-04:00,Microsoft-Windows-Security-Auditing,6416,Security,LAB-A,USB\VID_1234&PID_0001\FICTIONAL,102
+2026-11-01T06:30:00Z,Microsoft-Windows-Security-Auditing,6416,System,LAB-A,USB\VID_1234&PID_0001\FICTIONAL,103
