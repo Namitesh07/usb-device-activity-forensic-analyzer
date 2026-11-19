@@ -1,0 +1,13 @@
+{
+  "name": "usb-device-activity-forensic-analyzer",
+  "private": true,
+  "version": "1.7.0",
+  "description": "Development checks for the browser-based USB activity analyzer",
+  "scripts": {
+    "test": "node --test tests/*.test.cjs",
+    "test:browser": "node tests/browser/workflow.cjs"
+  },
+  "devDependencies": {
+    "playwright": "1.62.1"
+  }
+}
