@@ -2,7 +2,7 @@
 
 ## Prepared CSV contract
 
-The browser app accepts prepared UTF-8 CSVs as well as the selected Windows evidence formats described below. Choose up to 20 files at once, with a combined limit of **20 MiB and 100,000 records and registry keys**. Each file may have up to 256 header columns and each record may contain at most 512 values. A UTF-8 BOM is accepted. Analysis and exports run in the browser tab and hold data in memory; large inputs and exports can use substantial memory and briefly pause the interface.
+The browser app accepts prepared UTF-8 CSVs as well as the selected Windows evidence formats described below. Choose up to 20 files at once, with a combined limit of **20 MiB and 100,000 records and registry keys**. Each file may have up to 256 header columns and each record may contain at most 512 values. A UTF-8 BOM is accepted. Analysis and exports run locally in the browser and hold data in memory. During the initial preview, supported imports run in a background worker; XML uses the page parser. Reopening a saved case and analyzing reviewed records still run on the main thread. Progress counts completed files and cancellation may wait for a file read or main-thread parsing. Large inputs, analysis and exports can still use substantial memory and briefly pause the interface.
 
 Each source needs columns representing:
 
