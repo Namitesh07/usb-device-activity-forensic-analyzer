@@ -2,7 +2,7 @@
 
 This is a proposed, dependency-ordered backlog, not a claim that the listed features already exist. Validate each release with representative fixtures and document its limits. Versions and scope can change as the project develops.
 
-The v1.7.0 browser release adds background imports, cancellation, test fixtures, automated checks, and a fictional walkthrough. Broader event mappings and raw registry-hive parsing remain future work.
+The v1.8.0 browser release adds optional original known-list verification and complete printable quality reporting. Broader event mappings and raw registry-hive parsing remain future work.
 
 ## Phase 1 — More dependable input (completed in v1.2.0)
 
